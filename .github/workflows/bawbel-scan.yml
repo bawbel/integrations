@@ -19,7 +19,7 @@ jobs:
       - uses: actions/checkout@v4
 
       - name: Bawbel Scanner
-        uses: bawbel/integrations@v2
+        uses: bawbel/integrations@pr-commit-bot
         with:
           path: .
           fail-on-severity: high
