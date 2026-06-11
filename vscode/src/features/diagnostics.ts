@@ -14,6 +14,7 @@ import * as vscode from "vscode";
 import {
   BawbelFinding,
   BawbelFileResult,
+  Suppression,
   SEVERITY_INDEX,
   SEVERITY_EMOJI,
   PIRANHA_BASE,
@@ -60,6 +61,9 @@ export class DiagnosticsManager {
    * Filters out findings whose line is preceded by a bawbel-ignore comment.
    */
   applyResults(results: BawbelFileResult[]): void {
+    const suppressions = loadSuppressions();
+    const failSevIdx   = this.resolveFailSevIdx();
+
     for (const result of results) {
       const uri      = vscode.Uri.file(result.file_path);
       const findings = filterInlineIgnored(
@@ -70,7 +74,7 @@ export class DiagnosticsManager {
         filePath: result.file_path,
         findings,
       });
-      this.renderDiagnostics(result.file_path, findings);
+      this.renderDiagnostics(result.file_path, findings, suppressions, failSevIdx);
     }
   }
 
@@ -82,7 +86,9 @@ export class DiagnosticsManager {
     const uri    = vscode.Uri.file(filePath);
     const cached = this.rawCache.get(uri.toString());
     if (cached) {
-      this.renderDiagnostics(cached.filePath, cached.findings);
+      const suppressions = loadSuppressions();
+      const failSevIdx   = this.resolveFailSevIdx();
+      this.renderDiagnostics(cached.filePath, cached.findings, suppressions, failSevIdx);
     }
   }
 
@@ -91,8 +97,10 @@ export class DiagnosticsManager {
    * Call this after loading a new .bawbel-suppress.json.
    */
   reRenderAll(): void {
+    const suppressions = loadSuppressions();
+    const failSevIdx   = this.resolveFailSevIdx();
     this.rawCache.forEach(entry => {
-      this.renderDiagnostics(entry.filePath, entry.findings);
+      this.renderDiagnostics(entry.filePath, entry.findings, suppressions, failSevIdx);
     });
   }
 
@@ -126,13 +134,22 @@ export class DiagnosticsManager {
 
   // ── Private rendering ───────────────────────────────────────────────────────
 
-  private renderDiagnostics(filePath: string, findings: BawbelFinding[]): void {
-    const config      = vscode.workspace.getConfiguration("bawbel");
-    const failSevIdx  = SEVERITY_INDEX[
+  // What: resolves the failOnSeverity index from VS Code configuration
+  // Why:  extracted so applyResults / reRenderAll call getConfiguration once
+  // How:  reads bawbel.failOnSeverity, uppercases, looks up SEVERITY_INDEX
+  private resolveFailSevIdx(): number {
+    const config = vscode.workspace.getConfiguration("bawbel");
+    return SEVERITY_INDEX[
       config.get<string>("failOnSeverity", "high").toUpperCase()
     ] ?? SEVERITY_INDEX["HIGH"];
-    const suppressions = loadSuppressions();
+  }
 
+  private renderDiagnostics(
+    filePath:     string,
+    findings:     BawbelFinding[],
+    suppressions: Suppression[],
+    failSevIdx:   number
+  ): void {
     const uri   = vscode.Uri.file(filePath);
     const diags: vscode.Diagnostic[] = [];
 
