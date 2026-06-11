@@ -89,71 +89,13 @@ runs:
       id: config
       shell: bash
       run: |
-        # Start with action inputs as defaults
-        RECURSIVE="${{ inputs.recursive }}"
-        FAIL_SEV="${{ inputs.fail-on-severity }}"
-        FORMAT="${{ inputs.format }}"
-        NO_IGNORE="${{ inputs.no-ignore }}"
-
-        # Override with bawbel.yml values if the file exists
-        # Only applies when the action input is still at its default value
-        # so explicit inputs always win over bawbel.yml
-        if [ -f "bawbel.yml" ]; then
-          echo "Found bawbel.yml - loading project config"
-
-          YML_RECURSIVE=$(python3 -c "
-        import yaml, sys
-        try:
-            c = yaml.safe_load(open('bawbel.yml'))
-            v = c.get('scan', {}).get('recursive', '')
-            print(str(v).lower() if v != '' else '')
-        except Exception:
-            print('')
-        " 2>/dev/null)
-
-          YML_FAIL_SEV=$(python3 -c "
-        import yaml
-        try:
-            c = yaml.safe_load(open('bawbel.yml'))
-            print(c.get('scan', {}).get('fail_on_severity', ''))
-        except Exception:
-            print('')
-        " 2>/dev/null)
-
-          YML_FORMAT=$(python3 -c "
-        import yaml
-        try:
-            c = yaml.safe_load(open('bawbel.yml'))
-            print(c.get('scan', {}).get('format', ''))
-        except Exception:
-            print('')
-        " 2>/dev/null)
-
-          YML_NO_IGNORE=$(python3 -c "
-        import yaml
-        try:
-            c = yaml.safe_load(open('bawbel.yml'))
-            v = c.get('scan', {}).get('no_ignore', '')
-            print(str(v).lower() if v != '' else '')
-        except Exception:
-            print('')
-        " 2>/dev/null)
-
-          # Apply yml value only when action input is still at its default
-          [ -n "$YML_RECURSIVE" ] && [ "$RECURSIVE" = "true" ]  && RECURSIVE="$YML_RECURSIVE"
-          [ -n "$YML_FAIL_SEV" ] && [ "$FAIL_SEV"  = "high" ]   && FAIL_SEV="$YML_FAIL_SEV"
-          [ -n "$YML_FORMAT"   ] && [ "$FORMAT"    = "sarif" ]   && FORMAT="$YML_FORMAT"
-          [ -n "$YML_NO_IGNORE"] && [ "$NO_IGNORE" = "false" ]   && NO_IGNORE="$YML_NO_IGNORE"
-
-          echo "Config resolved: recursive=$RECURSIVE fail_on_severity=$FAIL_SEV format=$FORMAT no_ignore=$NO_IGNORE"
-        else
-          echo "No bawbel.yml found - using action input defaults"
-        fi
-
-        echo "recursive=$RECURSIVE"   >> $GITHUB_OUTPUT
-        echo "fail-on-severity=$FAIL_SEV" >> $GITHUB_OUTPUT
-        echo "format=$FORMAT"         >> $GITHUB_OUTPUT
-        echo "no-ignore=$NO_IGNORE"   >> $GITHUB_OUTPUT
+        python3 "${{ github.action_path }}/scripts/load_config.py" \
+          --config "bawbel.yml" \
+          --recursive "${{ inputs.recursive }}" \
+          --fail-on-severity "${{ inputs.fail-on-severity }}" \
+          --format "${{ inputs.format }}" \
+          --no-ignore "${{ inputs.no-ignore }}" \
+          | tee -a "$GITHUB_OUTPUT"
 
     - name: Run Bawbel scan
       id: scan
