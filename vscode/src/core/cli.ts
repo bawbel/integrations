@@ -25,12 +25,12 @@ export interface CommandResult {
 
 // ── Binary Discovery ──────────────────────────────────────────────────────────
 
-const CANDIDATE_PATHS = [
+export const CANDIDATE_PATHS = [
   "bawbel",
   "/usr/local/bin/bawbel",
   "/usr/bin/bawbel",
   `${process.env.HOME}/.local/bin/bawbel`,
-  `${process.env.HOME}/.local/pipx/bawbel/bin/bawbel`,
+  `${process.env.HOME}/.local/pipx/venvs/bawbel-scanner/bin/bawbel`,
 ];
 
 /**
