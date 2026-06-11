@@ -21,7 +21,7 @@ jobs:
       - name: Bawbel Scanner
         uses: bawbel/integrations@pr-commit-bot
         with:
-          path: .
+          path: ./tes_skill.md
           fail-on-severity: high
           comment-on-pr: true
           github-token: ${{ secrets.MY_GH_TOKEN }}
