@@ -11,9 +11,9 @@
 import * as cp   from "child_process";
 import * as fs   from "fs";
 import * as path from "path";
+import { BawbelFinding } from "./types";
 import * as vscode from "vscode";
 import {
-  BawbelFinding,
   Suppression,
   SUPPRESS_FILE,
 } from "./types";
@@ -152,4 +152,58 @@ export function removeSuppression(
 function toRelative(filePath: string): string {
   const root = vscode.workspace.workspaceFolders?.[0].uri.fsPath ?? "";
   return path.relative(root, filePath);
+}
+
+// ── Inline ignore filter ──────────────────────────────────────────────────────
+
+// What: filters out findings whose source line contains a bawbel-ignore comment
+// Why:  CLI v1.0.0 does not parse inline ignore comments — extension handles it
+//       client-side; lives here because it is a suppression mechanism, not a
+//       rendering concern
+// How:  reads the file once, checks the finding's own line for a bawbel-ignore
+//       comment; removes the finding if the comment is bare (suppress all) or
+//       specifies a matching rule_id / ave_id
+//
+// Sec:  INPUT  — filePath is a VS Code-provided path, not raw user input;
+//                findings is internal data from the CLI parse step
+//       OUTPUT — filtered subset of findings; no file content returned to callers
+//       TRUST  — file content treated as untrusted text; never eval'd
+//       ERROR  — any read failure returns findings unfiltered (fail open)
+export function filterInlineIgnored(
+  filePath: string,
+  findings: BawbelFinding[]
+): BawbelFinding[] {
+  if (findings.length === 0) { return findings; }
+
+  let lines: string[];
+  try {
+    const content = fs.readFileSync(filePath, "utf8") as string;
+    lines         = content.split("\n");
+  } catch {
+    return findings; // can't read file — return unfiltered
+  }
+
+  return findings.filter(f => {
+    const lineIdx  = (f.line ?? 1) - 1; // 0-based
+    const lineText = lines[lineIdx] ?? "";
+
+    if (!lineText.includes("bawbel-ignore")) { return true; }
+
+    // bare bawbel-ignore — suppress all rules on this line
+    const ignoreAll = /bawbel-ignore\s*(?:-->|\*\/)?\s*$/.test(lineText);
+    if (ignoreAll) { return false; }
+
+    // bawbel-ignore: rule_id or AVE-ID — suppress specific rule/AVE
+    // Non-greedy capture before --> or */ or end-of-line so hyphens in
+    // rule IDs (bawbel-shell-pipe) and AVE IDs (AVE-2026-00001) are kept.
+    const ruleMatch = lineText.match(/bawbel-ignore:\s*(.+?)(?:\s*-->|\s*\*\/|\s*$)/);
+    if (ruleMatch) {
+      const targets = ruleMatch[1].split(",").map(s => s.trim()).filter(Boolean);
+      if (targets.includes(f.rule_id) || targets.includes(f.ave_id)) {
+        return false;
+      }
+    }
+
+    return true;
+  });
 }
