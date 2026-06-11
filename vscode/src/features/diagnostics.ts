@@ -22,6 +22,22 @@ import {
 import { getRemediation, hasSpecificRemediation } from "../core/remediation";
 import { isSuppressed, loadSuppressions, filterInlineIgnored } from "../core/suppressions";
 
+// ── Severity mapping ──────────────────────────────────────────────────────────
+
+// What: maps a bawbel severity string + configured threshold to a VS Code DiagnosticSeverity
+// Why:  findings at or above the user's failOnSeverity threshold show as errors (red
+//       squiggles); below it show as warnings — pure calculation, no VS Code state needed
+// How:  compares SEVERITY_INDEX values; unknown severities default to 0 (below any
+//       threshold) so they render as warnings rather than silently disappearing
+export function toVsSeverity(
+  severity:   string,
+  failSevIdx: number
+): vscode.DiagnosticSeverity {
+  return (SEVERITY_INDEX[severity] ?? 0) >= failSevIdx
+    ? vscode.DiagnosticSeverity.Error
+    : vscode.DiagnosticSeverity.Warning;
+}
+
 // ── Cache ─────────────────────────────────────────────────────────────────────
 // Stores raw findings per file so we can re-apply suppression without re-scanning.
 
@@ -140,9 +156,7 @@ export class DiagnosticsManager {
     f:          BawbelFinding,
     failSevIdx: number
   ): vscode.Diagnostic {
-    const vsSev  = SEVERITY_INDEX[f.severity] >= failSevIdx
-      ? vscode.DiagnosticSeverity.Error
-      : vscode.DiagnosticSeverity.Warning;
+    const vsSev = toVsSeverity(f.severity, failSevIdx);
 
     const emoji    = SEVERITY_EMOJI[f.severity] ?? "⚪";
     const fix      = getRemediation(f.rule_id, f.description);
