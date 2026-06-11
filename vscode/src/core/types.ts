@@ -14,17 +14,35 @@
 // If the CLI schema changes, update ONLY this file and core/parser.ts.
 
 export interface BawbelFinding {
-  rule_id:     string;
-  ave_id:      string;
-  title:       string;
-  description: string;
-  severity:    Severity;
-  cvss_ai:     number;
-  line:        number;
-  col?:        number;
-  match?:      string;
-  engine:      string;
-  owasp?:      string[];
+  rule_id:         string;
+  ave_id:          string;
+  title:           string;
+  description:     string;
+  severity:        Severity;
+  cvss_ai?:        number;           // present in older CLI versions
+  aivss_score?:    number;           // top-level AIVSS score (v1.2+)
+  aivss?:          AivssBreakdown;   // full AIVSS breakdown object
+  line:            number | null;    // null when the finding is file-level, not line-level
+  col?:            number;
+  match?:          string;
+  engine:          string;
+  owasp?:          string[];         // OWASP AI Security categories (ASI*)
+  owasp_mcp?:      string[];         // OWASP MCP threat categories (MCP*)
+  piranha_url?:    string;
+  evidence_stage?: string;
+  confidence?:     number;
+  derived?:        boolean;
+}
+
+export interface AivssBreakdown {
+  cvss_base:         number;
+  aarf:              Record<string, number>;
+  aars:              number;
+  thm:               number;
+  mitigation_factor: number;
+  aivss_score:       number;
+  aivss_severity:    string;
+  spec_version:      string;
 }
 
 export interface BawbelFileResult {

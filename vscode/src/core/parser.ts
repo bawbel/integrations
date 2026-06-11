@@ -99,6 +99,7 @@ function normaliseFileResult(
   obj: Record<string, unknown>,
   fallbackPath: string
 ): BawbelFileResult {
+  const rawFindings = Array.isArray(obj.findings) ? obj.findings : [];
   return {
     file_path:      String(obj.file_path      ?? fallbackPath),
     component_type: String(obj.component_type ?? "unknown"),
@@ -106,7 +107,39 @@ function normaliseFileResult(
     max_severity:   String(obj.max_severity    ?? "LOW"),
     scan_time_ms:   Number(obj.scan_time_ms    ?? 0),
     has_error:      Boolean(obj.has_error      ?? false),
-    findings:       Array.isArray(obj.findings) ? obj.findings as BawbelFinding[] : [],
+    findings:       rawFindings.map(f => normaliseFinding(f as Record<string, unknown>)),
     error:          obj.error ? String(obj.error) : undefined,
   };
+}
+
+// What: maps a raw CLI finding object to the typed BawbelFinding interface
+// Why:  parser.ts is the single seam for CLI schema changes — all field renames
+//       and additions happen here, not scattered across consumers
+// How:  explicit field mapping with defaults; optional fields left undefined when
+//       absent so consumers can distinguish "not present" from "0" or "";
+//       line can be null (file-level findings have no line number)
+export function normaliseFinding(obj: Record<string, unknown>): BawbelFinding {
+  const f: BawbelFinding = {
+    rule_id:     String(obj.rule_id     ?? ""),
+    ave_id:      String(obj.ave_id      ?? ""),
+    title:       String(obj.title       ?? ""),
+    description: String(obj.description ?? ""),
+    severity:    String(obj.severity    ?? "LOW") as BawbelFinding["severity"],
+    line:        obj.line != null ? Number(obj.line) : null,
+    engine:      String(obj.engine      ?? ""),
+  };
+
+  if (obj.col             !== undefined) { f.col            = Number(obj.col); }
+  if (obj.match           !== undefined) { f.match          = String(obj.match); }
+  if (obj.cvss_ai         !== undefined) { f.cvss_ai        = Number(obj.cvss_ai); }
+  if (obj.aivss_score     !== undefined) { f.aivss_score    = Number(obj.aivss_score); }
+  if (obj.aivss           !== undefined) { f.aivss          = obj.aivss as BawbelFinding["aivss"]; }
+  if (obj.owasp           !== undefined) { f.owasp          = Array.isArray(obj.owasp)     ? obj.owasp.map(String)     : undefined; }
+  if (obj.owasp_mcp       !== undefined) { f.owasp_mcp      = Array.isArray(obj.owasp_mcp) ? obj.owasp_mcp.map(String) : undefined; }
+  if (obj.piranha_url     !== undefined) { f.piranha_url    = String(obj.piranha_url); }
+  if (obj.evidence_stage  !== undefined) { f.evidence_stage = String(obj.evidence_stage); }
+  if (obj.confidence      !== undefined) { f.confidence     = Number(obj.confidence); }
+  if (obj.derived         !== undefined) { f.derived        = Boolean(obj.derived); }
+
+  return f;
 }

@@ -125,7 +125,7 @@ export async function addSuppression(
   suppressions.push({
     rule_id:       finding.rule_id,
     file:          rel,
-    line:          finding.line,
+    line:          finding.line ?? 0,
     reason:        reason || "false positive",
     suppressed_at: new Date().toISOString(),
     suppressed_by: author,
