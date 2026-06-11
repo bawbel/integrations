@@ -18,3 +18,10 @@ docs/agents/handoffs/
 
 # OS
 .DS_Store
+
+# ── Private context files — never commit these ────────────────────────────────
+# These contain business strategy, roadmap, and founder context.
+# Keep them local only. Share via secure channel if needed.
+PROJECT_CONTEXT.md
+HOW-TO-USE.md
+.claude/
