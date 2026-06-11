@@ -157,6 +157,21 @@ runs:
         REPO: ${{ github.repository }}
       run: |
         python3 << 'EOF'
+        # What: posts or updates a Bawbel scan summary comment on the pull request
+        # Why:  CI should surface scan results in the PR without requiring tab
+        #       navigation; re-runs update the existing comment instead of flooding
+        #       the PR with duplicate noise (ADR-0002)
+        # How:  reads scan metrics from env vars, builds markdown body, finds any
+        #       existing Bawbel comment via GitHub API, then PATCHes or POSTs
+        #
+        # Sec:  INPUT  — all values from env vars set by prior action steps;
+        #                pr_number and repo validated non-empty before any network call
+        #       OUTPUT — markdown body; capped at 5 findings per file; never injects
+        #                code into the PR or the scanned repo (ADR-0001)
+        #       TRUST  — /tmp/bawbel_scan_results.json is action-internal output;
+        #                GitHub API responses treated as untrusted (only id/body read)
+        #       ERROR  — all HTTP and parse errors caught; script always exits 0 so
+        #                a comment failure never blocks the CI result
         import json, os, urllib.request, urllib.error
 
         findings_count = int(os.environ.get("FINDINGS_COUNT", "0"))
@@ -171,7 +186,9 @@ runs:
             print("Skipping PR comment: missing PR_NUMBER, REPO, or GH_TOKEN")
             raise SystemExit(0)
 
-        # Build top-level status line
+        # What: selects the status icon and label from the resolved risk score
+        # Why:  reviewers need an at-a-glance signal before reading the detail table
+        # How:  risk_score >= 9.0 → CRITICAL (🔴); >= 7.0 → HIGH (🟠); else MEDIUM (🟡)
         if result == "clean":
             status_icon  = "✅"
             status_label = "**Clean** — no findings detected"
@@ -185,7 +202,11 @@ runs:
             status_icon  = "🟡"
             status_label = f"**MEDIUM** — risk score {risk_score}/10"
 
-        # Parse JSON for finding detail
+        # What: reads per-finding detail rows from the JSON written by the scan step
+        # Why:  the summary table uses aggregate counts; this table shows individual AVEs
+        # How:  loads /tmp/bawbel_scan_results.json, caps at 5 findings per file to keep
+        #       the comment scannable; any read or parse failure is silently skipped so
+        #       the summary comment still posts even when detail is unavailable
         detail_lines = []
         try:
             with open("/tmp/bawbel_scan_results.json") as f:
@@ -194,7 +215,6 @@ runs:
             for file_result in data:
                 findings = file_result.get("findings", [])
                 toxic    = file_result.get("toxic_flows", [])
-                fp       = file_result.get("file_path", "")
 
                 for finding in findings[:5]:  # cap at 5 per file
                     sev    = finding.get("severity", "")
@@ -216,7 +236,10 @@ runs:
         except Exception:
             pass
 
-        # Compose comment body
+        # What: assembles the full markdown comment body from status, metrics, and detail
+        # Why:  single place to update the comment layout without touching API logic
+        # How:  header + summary table always present; per-finding table appended only
+        #       when there are findings to show; footer link always appended
         lines = [
             f"## {status_icon} Bawbel Scanner",
             "",
@@ -246,7 +269,11 @@ runs:
 
         body = "\n".join(lines)
 
-        # Check for existing Bawbel comment to update instead of creating a new one
+        # What: checks whether a Bawbel Scanner comment already exists on this PR
+        # Why:  ADR-0002 — update the existing comment in place, never post duplicates
+        # How:  GETs the full PR comment list, scans each body for "Bawbel Scanner",
+        #       stores the first matching comment id; network failure leaves id as None
+        #       so a fresh POST is attempted instead
         list_url = (
             f"https://api.github.com/repos/{repo}/issues/{pr_number}/comments"
         )
@@ -269,7 +296,10 @@ runs:
         except Exception:
             pass
 
-        # POST or PATCH
+        # What: upserts the Bawbel comment — PATCHes if one exists, POSTs if new
+        # Why:  idempotent — every scan run leaves exactly one Bawbel comment on the PR
+        # How:  selects PATCH + comment URL when existing_id found, else POST + list URL;
+        #       HTTPError is logged and swallowed — a comment failure must not fail CI
         if existing_id:
             url    = f"https://api.github.com/repos/{repo}/issues/comments/{existing_id}"
             method = "PATCH"
