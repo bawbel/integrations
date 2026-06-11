@@ -1,3 +1,20 @@
-vscode/out/
+# Python
+__pycache__/
+*.pyc
+.venv/
+dist/
+*.egg-info/
+
+# Node
 vscode/node_modules/
-**/*.vsix
+vscode/out/
+vscode/*.vsix
+
+# Bawbel session notes
+docs/agents/handoffs/
+
+# Environment
+.env
+
+# OS
+.DS_Store
