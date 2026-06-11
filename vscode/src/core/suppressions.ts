@@ -20,17 +20,17 @@ import {
 
 // ── Git user resolution ───────────────────────────────────────────────────────
 
-/**
- * Resolve the current developer identity for the suppression audit trail.
- *
- * Priority:
- *   1. git config user.name + user.email  (workspace .git/config)
- *   2. git config --global                (global ~/.gitconfig)
- *   3. OS username                        (process.env.USER / USERNAME)
- *   4. "vscode"                           (fallback)
- *
- * No dependency on GitLens or any extension — plain git CLI call.
- */
+// What: resolves the current developer identity for the suppression audit trail
+// Why:  suppressed findings need an author so reviewers know who justified them;
+//       the suppressed_by field is required by the Suppression schema
+// How:  runs "git config user.name/email" (workspace first, then global), falls
+//       back to OS username env vars, then "vscode" if all else fails;
+//       no dependency on GitLens or any other extension
+//
+// Sec:  INPUT  — args are hardcoded constants ["git","config","user.name"] — no user input
+//       OUTPUT — trimmed string returned as display text; never rendered as HTML or executed
+//       TRUST  — git config output treated as untrusted display string only, never eval'd
+//       ERROR  — any spawn error resolves "" (graceful); final fallback is literal "vscode"
 async function resolveGitUser(): Promise<string> {
   const run = (cmd: string, args: string[]): Promise<string> =>
     new Promise(resolve => {
