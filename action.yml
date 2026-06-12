@@ -111,7 +111,17 @@ runs:
 
         if [ "$FORMAT" = "sarif" ]; then
           SARIF_FILE="bawbel-results.sarif"
-          bawbel scan "${{ inputs.path }}" $ARGS > "$SARIF_FILE" 2>/dev/null || true
+          bawbel scan "${{ inputs.path }}" $ARGS > "$SARIF_FILE" 2>/tmp/bawbel_sarif_err.txt || true
+
+          # Validate SARIF — if bawbel crashed or produced non-JSON output the file
+          # will be empty or contain plain-text errors, causing upload-sarif to fail
+          # with "Unexpected end of JSON input". Fall back to a minimal valid SARIF.
+          if ! python3 -c "import json; json.load(open('$SARIF_FILE'))" 2>/dev/null; then
+            cat /tmp/bawbel_sarif_err.txt >&2 || true
+            printf '{"version":"2.1.0","$schema":"https://raw.githubusercontent.com/oasis-tcs/sarif-spec/master/Schemata/sarif-schema-2.1.0.json","runs":[]}\n' \
+              > "$SARIF_FILE"
+          fi
+
           echo "sarif-file=$SARIF_FILE" >> $GITHUB_OUTPUT
         fi
 
