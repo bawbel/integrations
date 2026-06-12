@@ -1,3 +1,27 @@
-vscode/out/
+# Python
+__pycache__/
+*.pyc
+.venv/
+dist/
+*.egg-info/
+
+# Node
 vscode/node_modules/
-**/*.vsix
+vscode/out/
+vscode/*.vsix
+
+# Bawbel session notes
+docs/agents/handoffs/
+
+# Environment
+.env
+
+# OS
+.DS_Store
+
+# ── Private context files — never commit these ────────────────────────────────
+# These contain business strategy, roadmap, and founder context.
+# Keep them local only. Share via secure channel if needed.
+PROJECT_CONTEXT.md
+HOW-TO-USE.md
+.claude/

@@ -42,6 +42,16 @@ inputs:
     required: false
     default: "all"
 
+  comment-on-pr:
+    description: "Post a summary comment on the pull request. Requires github-token."
+    required: false
+    default: "true"
+
+  github-token:
+    description: "GitHub token for posting PR comments. Use secrets.GITHUB_TOKEN."
+    required: false
+    default: ""
+
 outputs:
   sarif-file:
     description: "Path to the generated SARIF file (when format is sarif)"
@@ -50,6 +60,10 @@ outputs:
   findings-count:
     description: "Number of active findings"
     value: ${{ steps.scan.outputs.findings-count }}
+
+  toxic-flows-count:
+    description: "Number of toxic flows detected"
+    value: ${{ steps.scan.outputs.toxic-flows-count }}
 
   risk-score:
     description: "Risk score 0.0 to 10.0"
@@ -71,47 +85,267 @@ runs:
           pip install "bawbel-scanner[${{ inputs.extras }}]==${{ inputs.version }}" --quiet
         fi
 
+    - name: Load bawbel.yml config
+      id: config
+      shell: bash
+      run: |
+        python3 "${{ github.action_path }}/scripts/load_config.py" \
+          --config "bawbel.yml" \
+          --recursive "${{ inputs.recursive }}" \
+          --fail-on-severity "${{ inputs.fail-on-severity }}" \
+          --format "${{ inputs.format }}" \
+          --no-ignore "${{ inputs.no-ignore }}" \
+          | tee -a "$GITHUB_OUTPUT"
+
     - name: Run Bawbel scan
       id: scan
       shell: bash
       run: |
-        ARGS="--format ${{ inputs.format }}"
+        RECURSIVE="${{ steps.config.outputs.recursive }}"
+        FORMAT="${{ steps.config.outputs.format }}"
+        NO_IGNORE="${{ steps.config.outputs.no-ignore }}"
 
-        if [ "${{ inputs.recursive }}" = "true" ]; then
-          ARGS="$ARGS --recursive"
-        fi
+        ARGS="--format $FORMAT"
+        [ "$RECURSIVE" = "true" ] && ARGS="$ARGS --recursive"
+        [ "$NO_IGNORE" = "true" ] && ARGS="$ARGS --no-ignore"
 
-        if [ "${{ inputs.no-ignore }}" = "true" ]; then
-          ARGS="$ARGS --no-ignore"
-        fi
-
-        if [ "${{ inputs.format }}" = "sarif" ]; then
+        if [ "$FORMAT" = "sarif" ]; then
           SARIF_FILE="bawbel-results.sarif"
-          bawbel scan "${{ inputs.path }}" $ARGS > "$SARIF_FILE" 2>/dev/null || true
+          bawbel scan "${{ inputs.path }}" $ARGS > "$SARIF_FILE" 2>/tmp/bawbel_sarif_err.txt || true
+
+          # Validate SARIF — if bawbel crashed or produced non-JSON output the file
+          # will be empty or contain plain-text errors, causing upload-sarif to fail
+          # with "Unexpected end of JSON input". Fall back to a minimal valid SARIF.
+          if ! python3 -c "import json; json.load(open('$SARIF_FILE'))" 2>/dev/null; then
+            cat /tmp/bawbel_sarif_err.txt >&2 || true
+            printf '{"version":"2.1.0","$schema":"https://raw.githubusercontent.com/oasis-tcs/sarif-spec/master/Schemata/sarif-schema-2.1.0.json","runs":[]}\n' \
+              > "$SARIF_FILE"
+          fi
+
           echo "sarif-file=$SARIF_FILE" >> $GITHUB_OUTPUT
         fi
 
-        JSON_OUT=$(bawbel scan "${{ inputs.path }}" $ARGS --format json 2>/dev/null || echo "[]")
+        JSON_ARGS="--format json"
+        [ "$RECURSIVE" = "true" ] && JSON_ARGS="$JSON_ARGS --recursive"
+        [ "$NO_IGNORE" = "true" ] && JSON_ARGS="$JSON_ARGS --no-ignore"
+
+        JSON_OUT=$(bawbel scan "${{ inputs.path }}" $JSON_ARGS 2>/dev/null || echo "[]")
 
         FINDINGS=$(echo "$JSON_OUT" | python3 -c "
-        import json,sys
+        import json, sys
         data = json.load(sys.stdin)
-        total = sum(len(r.get('findings',[])) for r in data)
-        score = max((r.get('risk_score',0) for r in data), default=0)
-        result = 'findings' if total > 0 else 'clean'
+        total = sum(len(r.get('findings', [])) for r in data)
+        toxic = sum(len(r.get('toxic_flows', [])) for r in data)
+        score = max((r.get('risk_score', 0) for r in data), default=0)
+        result = 'findings' if total > 0 or toxic > 0 else 'clean'
         print('count=' + str(total))
+        print('toxic=' + str(toxic))
         print('score=' + str(round(score, 1)))
         print('result=' + result)
-        " 2>/dev/null || printf "count=0\nscore=0.0\nresult=clean")
+        " 2>/dev/null || printf "count=0\ntoxic=0\nscore=0.0\nresult=clean")
 
-        echo "findings-count=$(echo "$FINDINGS" | grep count= | cut -d= -f2)" >> $GITHUB_OUTPUT
-        echo "risk-score=$(echo "$FINDINGS" | grep score= | cut -d= -f2)" >> $GITHUB_OUTPUT
-        echo "result=$(echo "$FINDINGS" | grep result= | cut -d= -f2)" >> $GITHUB_OUTPUT
+        echo "findings-count=$(echo "$FINDINGS" | grep count= | cut -d= -f2)"     >> $GITHUB_OUTPUT
+        echo "toxic-flows-count=$(echo "$FINDINGS" | grep toxic= | cut -d= -f2)"  >> $GITHUB_OUTPUT
+        echo "risk-score=$(echo "$FINDINGS" | grep score= | cut -d= -f2)"         >> $GITHUB_OUTPUT
+        echo "result=$(echo "$FINDINGS" | grep result= | cut -d= -f2)"            >> $GITHUB_OUTPUT
+
+        echo "$JSON_OUT" > /tmp/bawbel_scan_results.json
+
+    - name: Post PR comment
+      if: >
+        inputs.comment-on-pr == 'true' &&
+        inputs.github-token != '' &&
+        github.event_name == 'pull_request'
+      shell: bash
+      env:
+        GH_TOKEN: ${{ inputs.github-token }}
+        FINDINGS_COUNT: ${{ steps.scan.outputs.findings-count }}
+        TOXIC_COUNT: ${{ steps.scan.outputs.toxic-flows-count }}
+        RISK_SCORE: ${{ steps.scan.outputs.risk-score }}
+        RESULT: ${{ steps.scan.outputs.result }}
+        PR_NUMBER: ${{ github.event.pull_request.number }}
+        REPO: ${{ github.repository }}
+      run: |
+        python3 << 'EOF'
+        # What: posts or updates a Bawbel scan summary comment on the pull request
+        # Why:  CI should surface scan results in the PR without requiring tab
+        #       navigation; re-runs update the existing comment instead of flooding
+        #       the PR with duplicate noise (ADR-0002)
+        # How:  reads scan metrics from env vars, builds markdown body, finds any
+        #       existing Bawbel comment via GitHub API, then PATCHes or POSTs
+        #
+        # Sec:  INPUT  — all values from env vars set by prior action steps;
+        #                pr_number and repo validated non-empty before any network call
+        #       OUTPUT — markdown body; capped at 5 findings per file; never injects
+        #                code into the PR or the scanned repo (ADR-0001)
+        #       TRUST  — /tmp/bawbel_scan_results.json is action-internal output;
+        #                GitHub API responses treated as untrusted (only id/body read)
+        #       ERROR  — all HTTP and parse errors caught; script always exits 0 so
+        #                a comment failure never blocks the CI result
+        import json, os, urllib.request, urllib.error
+
+        findings_count = int(os.environ.get("FINDINGS_COUNT", "0"))
+        toxic_count    = int(os.environ.get("TOXIC_COUNT", "0"))
+        risk_score     = os.environ.get("RISK_SCORE", "0.0")
+        result         = os.environ.get("RESULT", "clean")
+        pr_number      = os.environ.get("PR_NUMBER", "")
+        repo           = os.environ.get("REPO", "")
+        token          = os.environ.get("GH_TOKEN", "")
+
+        if not pr_number or not repo or not token:
+            print("Skipping PR comment: missing PR_NUMBER, REPO, or GH_TOKEN")
+            raise SystemExit(0)
+
+        # What: selects the status icon and label from the resolved risk score
+        # Why:  reviewers need an at-a-glance signal before reading the detail table
+        # How:  risk_score >= 9.0 → CRITICAL (🔴); >= 7.0 → HIGH (🟠); else MEDIUM (🟡)
+        if result == "clean":
+            status_icon  = "✅"
+            status_label = "**Clean** — no findings detected"
+        elif float(risk_score) >= 9.0:
+            status_icon  = "🔴"
+            status_label = f"**CRITICAL** — risk score {risk_score}/10"
+        elif float(risk_score) >= 7.0:
+            status_icon  = "🟠"
+            status_label = f"**HIGH** — risk score {risk_score}/10"
+        else:
+            status_icon  = "🟡"
+            status_label = f"**MEDIUM** — risk score {risk_score}/10"
+
+        # What: reads per-finding detail rows from the JSON written by the scan step
+        # Why:  the summary table uses aggregate counts; this table shows individual AVEs
+        # How:  loads /tmp/bawbel_scan_results.json, caps at 5 findings per file to keep
+        #       the comment scannable; any read or parse failure is silently skipped so
+        #       the summary comment still posts even when detail is unavailable
+        detail_lines = []
+        try:
+            with open("/tmp/bawbel_scan_results.json") as f:
+                data = json.load(f)
+
+            for file_result in data:
+                findings = file_result.get("findings", [])
+                toxic    = file_result.get("toxic_flows", [])
+
+                for finding in findings[:5]:  # cap at 5 per file
+                    sev    = finding.get("severity", "")
+                    ave_id = finding.get("ave_id", "")
+                    title  = finding.get("title", "")
+                    aivss  = finding.get("aivss_score", "")
+                    sev_icon = {"CRITICAL": "🔴", "HIGH": "🟠",
+                                "MEDIUM": "🟡", "LOW": "🔵"}.get(sev, "⚪")
+                    detail_lines.append(
+                        f"| {sev_icon} {sev} | `{ave_id}` | {title} | {aivss} |"
+                    )
+
+                for flow in toxic:
+                    title = flow.get("title", "")
+                    aivss = flow.get("aivss_score", "")
+                    detail_lines.append(
+                        f"| ⛓ CRITICAL | toxic flow | {title} | {aivss} |"
+                    )
+        except Exception:
+            pass
+
+        # What: assembles the full markdown comment body from status, metrics, and detail
+        # Why:  single place to update the comment layout without touching API logic
+        # How:  header + summary table always present; per-finding table appended only
+        #       when there are findings to show; footer link always appended
+        lines = [
+            f"## {status_icon} Bawbel Scanner",
+            "",
+            f"{status_label}",
+            "",
+            f"| | |",
+            f"|---|---|",
+            f"| Findings | {findings_count} |",
+            f"| Toxic flows | {toxic_count} |",
+            f"| Risk score | {risk_score} / 10 |",
+        ]
+
+        if detail_lines:
+            lines += [
+                "",
+                "| Severity | AVE ID | Title | AIVSS |",
+                "|---|---|---|---|",
+            ]
+            lines += detail_lines
+
+        lines += [
+            "",
+            "<sub>🛡 [Bawbel Scanner](https://github.com/bawbel/scanner) "
+            "· [AVE Database](https://github.com/bawbel/ave) "
+            "· [PiranhaDB](https://api.piranha.bawbel.io)</sub>",
+        ]
+
+        body = "\n".join(lines)
+
+        # What: checks whether a Bawbel Scanner comment already exists on this PR
+        # Why:  ADR-0002 — update the existing comment in place, never post duplicates
+        # How:  GETs the full PR comment list, scans each body for "Bawbel Scanner",
+        #       stores the first matching comment id; network failure leaves id as None
+        #       so a fresh POST is attempted instead
+        list_url = (
+            f"https://api.github.com/repos/{repo}/issues/{pr_number}/comments"
+        )
+        req = urllib.request.Request(
+            list_url,
+            headers={
+                "Authorization": f"Bearer {token}",
+                "Accept": "application/vnd.github+json",
+                "X-GitHub-Api-Version": "2022-11-28",
+            },
+        )
+        existing_id = None
+        try:
+            with urllib.request.urlopen(req) as r:
+                comments = json.loads(r.read())
+            for c in comments:
+                if "Bawbel Scanner" in c.get("body", ""):
+                    existing_id = c["id"]
+                    break
+        except Exception:
+            pass
+
+        # What: upserts the Bawbel comment — PATCHes if one exists, POSTs if new
+        # Why:  idempotent — every scan run leaves exactly one Bawbel comment on the PR
+        # How:  selects PATCH + comment URL when existing_id found, else POST + list URL;
+        #       HTTPError is logged and swallowed — a comment failure must not fail CI
+        if existing_id:
+            url    = f"https://api.github.com/repos/{repo}/issues/comments/{existing_id}"
+            method = "PATCH"
+        else:
+            url    = list_url
+            method = "POST"
+
+        payload = json.dumps({"body": body}).encode()
+        req = urllib.request.Request(
+            url,
+            data=payload,
+            method=method,
+            headers={
+                "Authorization": f"Bearer {token}",
+                "Accept": "application/vnd.github+json",
+                "Content-Type": "application/json",
+                "X-GitHub-Api-Version": "2022-11-28",
+            },
+        )
+        try:
+            with urllib.request.urlopen(req) as r:
+                action = "Updated" if existing_id else "Posted"
+                print(f"{action} Bawbel PR comment (HTTP {r.status})")
+        except urllib.error.HTTPError as e:
+            print(f"Failed to post PR comment: HTTP {e.code} {e.reason}")
+
+        EOF
 
     - name: Check severity threshold
       shell: bash
       run: |
-        if [ "${{ inputs.fail-on-severity }}" = "none" ]; then
+        FAIL_SEV="${{ steps.config.outputs.fail-on-severity }}"
+        RECURSIVE="${{ steps.config.outputs.recursive }}"
+        NO_IGNORE="${{ steps.config.outputs.no-ignore }}"
+
+        if [ "$FAIL_SEV" = "none" ]; then
           exit 0
         fi
 
@@ -121,13 +355,9 @@ runs:
         fi
 
         EXTRA_ARGS=""
-        if [ "${{ inputs.recursive }}" = "true" ]; then
-          EXTRA_ARGS="$EXTRA_ARGS --recursive"
-        fi
-        if [ "${{ inputs.no-ignore }}" = "true" ]; then
-          EXTRA_ARGS="$EXTRA_ARGS --no-ignore"
-        fi
+        [ "$RECURSIVE" = "true" ] && EXTRA_ARGS="$EXTRA_ARGS --recursive"
+        [ "$NO_IGNORE" = "true" ] && EXTRA_ARGS="$EXTRA_ARGS --no-ignore"
 
         bawbel scan "${{ inputs.path }}" $EXTRA_ARGS \
-          --fail-on-severity "${{ inputs.fail-on-severity }}" \
+          --fail-on-severity "$FAIL_SEV" \
           --format text

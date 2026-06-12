@@ -1,0 +1,33 @@
+name: Bawbel Security Scan
+
+on:
+  push:
+    branches: [main, develop]
+  pull_request:
+    branches: [main, develop]
+
+jobs:
+  scan:
+    name: Scan for AVE vulnerabilities
+    runs-on: ubuntu-latest
+    permissions:
+      security-events: write
+      contents: read
+      pull-requests: write
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Bawbel Scanner
+        uses: bawbel/integrations@pr-commit-bot
+        with:
+          path: ./tes_skill.md
+          fail-on-severity: high
+          comment-on-pr: true
+          github-token: ${{ secrets.MY_GH_TOKEN }}
+
+      - name: Upload SARIF to GitHub Security
+        uses: github/codeql-action/upload-sarif@v4
+        if: always()
+        with:
+          sarif_file: bawbel-results.sarif

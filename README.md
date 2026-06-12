@@ -1,35 +1,38 @@
 # bawbel-integrations
 
-Integrations for [Bawbel Scanner](https://bawbel.io) — scan agentic AI
-components for [AVE vulnerabilities](https://github.com/bawbel/bawbel-ave)
+<!-- mcp-name: io.github.bawbel/integrations -->
+
+Integrations for [Bawbel Scanner](https://bawbel.io) — scan MCP servers and
+agentic AI skill files for [AVE vulnerabilities](https://github.com/bawbel/ave)
 across every stage of your development workflow.
 
-[![GitHub Actions](https://img.shields.io/badge/GitHub%20Actions-v1-1db894)](action.yml)
-[![VS Code](https://img.shields.io/visual-studio-marketplace/v/bawbel.bawbel-scanner?color=1db894&label=VS%20Code)](https://marketplace.visualstudio.com/items?itemName=bawbel.bawbel-scanner)
-[![AVE Records](https://img.shields.io/badge/AVE%20records-40-1db894)](https://github.com/bawbel/bawbel-ave)
+[![GitHub Actions](https://img.shields.io/badge/GitHub_Actions-v2-2EA043)](action.yml)
+[![VS Code](https://img.shields.io/visual-studio-marketplace/v/bawbel.bawbel-scanner?color=2EA043&label=VS_Code)](https://marketplace.visualstudio.com/items?itemName=bawbel.bawbel-scanner)
+[![AVE Records](https://img.shields.io/badge/AVE_records-48-2EA043)](https://github.com/bawbel/ave)
+[![Scanner](https://img.shields.io/badge/bawbel--scanner-v1.2.3-1B5E3F)](https://github.com/bawbel/scanner)
+[![License](https://img.shields.io/badge/license-Apache_2.0-blue)](LICENSE)
+[![MCP Registry](https://img.shields.io/badge/MCP_Registry-listed-purple)](https://registry.modelcontextprotocol.io)
 
 ---
 
 ## Integrations
 
-| Integration | Status | Directory |
+| Integration | Status | Notes |
 |---|---|---|
-| [GitHub Actions](#github-actions) | ✅ v1 | [`action.yml`](action.yml) |
-| [VS Code Extension](#vs-code-extension) | ✅ v1.1.1 | [`vscode/`](vscode/) |
-| [Pre-commit](#pre-commit) | ✅ v1.1 | [`.pre-commit-hooks.yaml`](.pre-commit-hooks.yaml) |
-| [GitLab CI](#gitlab-ci) | ✅ v1.1 | [`examples/gitlab-ci.yml`](examples/gitlab-ci.yml) |
-| [Jenkins](#jenkins) | ✅ v1.1 | [`examples/Jenkinsfile`](examples/Jenkinsfile) |
-| [CircleCI](#circleci) | ✅ v1.1 | [`examples/circleci.yml`](examples/circleci.yml) |
-| [Azure DevOps](#azure-devops) | ✅ v1.1 | [`examples/azure-devops.yml`](examples/azure-devops.yml) |
-| [Bitbucket Pipelines](#bitbucket-pipelines) | ✅ v1.1 | [`examples/bitbucket-pipelines.yml`](examples/bitbucket-pipelines.yml) |
+| [GitHub Actions](#github-actions) | ✅ v2 | PR comment bot, bawbel.yml support |
+| [VS Code Extension](#vs-code-extension) | ✅ v1.1.1 | Inline diagnostics, auto-scan on save |
+| [Pre-commit](#pre-commit) | ✅ v1.1 | Block at commit boundary |
+| [GitLab CI](#gitlab-ci) | ✅ v1.1 | SAST report upload |
+| [Jenkins](#jenkins) | ✅ v1.1 | Pipeline step |
+| [CircleCI](#circleci) | ✅ v1.1 | Orb-style job |
+| [Azure DevOps](#azure-devops) | ✅ v1.1 | Pipeline task |
+| [Bitbucket Pipelines](#bitbucket-pipelines) | ✅ v1.1 | Step definition |
 
 ---
 
 ## GitHub Actions
 
-Scan on every push and pull request. Findings appear as inline PR annotations
-in the GitHub Security tab via SARIF upload. Blocks merges on CRITICAL or HIGH
-findings.
+### Quickstart
 
 ```yaml
 # .github/workflows/bawbel.yml
@@ -42,59 +45,189 @@ jobs:
     permissions:
       security-events: write
       contents: read
+      pull-requests: write
     steps:
       - uses: actions/checkout@v4
-      - uses: bawbel/bawbel-integrations@v1
+
+      - uses: bawbel/integrations@v2
         with:
           path: .
           fail-on-severity: high
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+
       - uses: github/codeql-action/upload-sarif@v3
         if: always()
         with:
           sarif_file: bawbel-results.sarif
 ```
 
-**Inputs**
+This scans on every push and pull request. On PRs it posts a summary comment
+with findings, risk score, and toxic flow count. Findings upload to the GitHub
+Security tab as inline annotations via SARIF.
+
+### PR comment
+
+When `github-token` is set and the workflow runs on a `pull_request` event,
+Bawbel posts a comment on the PR:
+
+```
+## ✅ Bawbel Scanner
+
+**Clean** — no findings detected
+
+|  |  |
+|---|---|
+| Findings | 0 |
+| Toxic flows | 0 |
+| Risk score | 0.0 / 10 |
+
+🛡 Bawbel Scanner · AVE Database · PiranhaDB
+```
+
+When findings are present:
+
+```
+## 🟠 Bawbel Scanner
+
+**HIGH** — risk score 8.7/10
+
+|  |  |
+|---|---|
+| Findings | 4 |
+| Toxic flows | 2 |
+| Risk score | 8.7 / 10 |
+
+| Severity | AVE ID | Title | AIVSS |
+|---|---|---|---|
+| 🔴 CRITICAL | AVE-2026-00001 | External instruction fetch | 8.0 |
+| 🟠 HIGH | AVE-2026-00002 | Tool description injection | 7.3 |
+| ⛓ CRITICAL | toxic flow | Credential Exfiltration Chain | 9.8 |
+
+🛡 Bawbel Scanner · AVE Database · PiranhaDB
+```
+
+The comment updates in place on re-runs. No duplicate comments.
+
+### bawbel.yml project config
+
+Put a `bawbel.yml` in your repo root to set project-level defaults. The Action
+reads it automatically - no need to repeat settings in every workflow file.
+
+```yaml
+# bawbel.yml
+version: "1.0"
+
+scan:
+  recursive: true
+  fail_on_severity: high     # critical | high | medium | low
+  format: sarif              # text | json | sarif
+  no_ignore: false
+```
+
+**Priority order (highest wins):**
+
+```
+action input (explicitly passed)
+    ↑ overrides
+bawbel.yml value
+    ↑ overrides
+action default
+```
+
+### .bawbelignore
+
+The scanner automatically reads `.bawbelignore` from the scan root.
+Use it to suppress entire paths — test fixtures, documentation with
+intentional examples, generated files:
+
+```
+# .bawbelignore
+docs/**
+tests/fixtures/skills/clean/**
+examples/**
+```
+
+No Action config needed. `.bawbelignore` is always active unless
+`no-ignore: true` is set (audit mode).
+
+### Inputs
 
 | Input | Default | Description |
 |---|---|---|
-| `path` | `.` | Path to scan |
-| `fail-on-severity` | `high` | `critical` \| `high` \| `medium` \| `low` |
-| `format` | `sarif` | `sarif` \| `json` \| `text` |
+| `path` | `.` | File or directory to scan |
 | `recursive` | `true` | Scan subdirectories |
+| `fail-on-severity` | `high` | `critical` \| `high` \| `medium` \| `low` \| `none` |
+| `format` | `sarif` | `sarif` \| `json` \| `text` |
+| `no-ignore` | `false` | Bypass all suppressions (audit mode) |
+| `comment-on-pr` | `true` | Post summary comment on pull requests |
+| `github-token` | `""` | Required for PR comments. Use `secrets.GITHUB_TOKEN` |
 | `version` | `latest` | `bawbel-scanner` version to install |
-| `extras` | `all` | pip extras: `yara semgrep llm magika all` |
+| `extras` | `all` | pip extras: `yara` \| `semgrep` \| `llm` \| `magika` \| `all` |
 
-See [`action.yml`](action.yml) for full input/output reference.
+### Outputs
+
+| Output | Description |
+|---|---|
+| `sarif-file` | Path to generated SARIF file |
+| `findings-count` | Number of active findings |
+| `toxic-flows-count` | Number of toxic flows detected |
+| `risk-score` | Risk score 0.0 to 10.0 |
+| `result` | `clean` or `findings` |
+
+### Use outputs in subsequent steps
+
+```yaml
+- uses: bawbel/integrations@v2
+  id: bawbel
+  with:
+    github-token: ${{ secrets.GITHUB_TOKEN }}
+
+- name: Block on toxic flows
+  if: steps.bawbel.outputs.toxic-flows-count > 0
+  run: |
+    echo "Toxic flows detected: ${{ steps.bawbel.outputs.toxic-flows-count }}"
+    exit 1
+```
+
+### Disable PR comment
+
+```yaml
+- uses: bawbel/integrations@v2
+  with:
+    comment-on-pr: false
+```
+
+### Audit mode (see all findings including suppressed)
+
+```yaml
+- uses: bawbel/integrations@v2
+  with:
+    no-ignore: true
+    github-token: ${{ secrets.GITHUB_TOKEN }}
+```
 
 ---
 
 ## VS Code Extension
 
-Real-time inline diagnostics as you write. Hover any squiggle to see severity,
-matched text, and exactly how to fix it. Right-click to suppress false positives.
-Full scan report with `Cmd+Alt+R`.
+Real-time inline diagnostics as you write. Hover any squiggle for severity,
+matched text, AVE ID, AIVSS score, and fix guidance. Right-click to suppress.
 
 ```bash
-# Install from Marketplace
 ext install bawbel.bawbel-scanner
-
-# Or install CLI first if needed
-pip install bawbel-scanner
 ```
 
-**What you get:**
+**Features:**
 
-- Inline squiggles on every finding — red (error) or yellow (warning)
-- Hover tooltip: severity, match, AVE ID, CVSS-AI score, "How to fix"
-- Auto-scan on save (~25ms, pattern+yara — never slows the machine)
-- Full scan on demand — all engines, workspace or folder scope (`Cmd+Alt+B`)
-- Watch mode — real-time background scanning, scoped to file/folder/workspace
+- Inline squiggles on every finding — red (CRITICAL/HIGH) or yellow (MEDIUM/LOW)
+- Hover tooltip: severity, match text, AVE ID, AIVSS score, how to fix
+- Auto-scan on save (~25ms, pattern + YARA — never slows the editor)
+- Full scan on demand — all engines (`Cmd+Alt+B`)
+- Watch mode — background scanning scoped to file/folder/workspace
 - Scan report — `bawbel report` output in a webview panel (`Cmd+Alt+R`)
-- False-positive suppression — right-click → suppress → saved to `.bawbel-suppress.json`
-- `suppressed_by` resolved from `git config user.name` — full audit trail
-- Team suppressions — commit `.bawbel-suppress.json` to share with your team
-- Status bar: `Bawbel: ✓ clean` · `Bawbel: 3 finding(s)` · `👁 Bawbel: watching`
+- Right-click suppress — inserts justified `bawbel-ignore` comment with reason
+- `suppressed_by` resolved from `git config user.name`
+- Status bar: `Bawbel: ✓ clean` / `Bawbel: 3 finding(s)` / `👁 Bawbel: watching`
 
 **Build from source:**
 
@@ -105,34 +238,27 @@ npx vsce package --no-dependencies
 code --install-extension bawbel-scanner-1.1.1.vsix
 ```
 
-See [`vscode/README.md`](vscode/README.md) for full documentation.
-
 ---
 
 ## Pre-commit
 
-Block malicious skills at the commit boundary — before they reach CI.
-
-### Option 1 — via bawbel-integrations repo (recommended)
-
-pre-commit automatically installs `bawbel-scanner` in an isolated virtualenv.
-No manual `pip install` needed.
+Block commits that introduce security findings before they reach CI.
 
 ```yaml
 # .pre-commit-config.yaml
 repos:
-  - repo: https://github.com/bawbel/bawbel-integrations
-    rev: v1
+  - repo: https://github.com/bawbel/integrations
+    rev: v2
     hooks:
-      - id: bawbel-scan          # pattern engine only (~15ms per file)
+      - id: bawbel-scan        # pattern engine only (~15ms per file)
 ```
 
-All engines (YARA + Semgrep + Magika — slower, more thorough):
+All engines (slower, more thorough):
 
 ```yaml
 repos:
-  - repo: https://github.com/bawbel/bawbel-integrations
-    rev: v1
+  - repo: https://github.com/bawbel/integrations
+    rev: v2
     hooks:
       - id: bawbel-scan-all
 ```
@@ -141,24 +267,16 @@ Custom severity threshold:
 
 ```yaml
 repos:
-  - repo: https://github.com/bawbel/bawbel-integrations
-    rev: v1
+  - repo: https://github.com/bawbel/integrations
+    rev: v2
     hooks:
       - id: bawbel-scan
         args: ["--fail-on-severity", "critical"]
 ```
 
-### Option 2 — local hook (air-gapped / no GitHub access)
-
-Use this when your environment cannot reach GitHub, or you want to manage
-the scanner version yourself.
-
-```bash
-pip install "bawbel-scanner>=1.0.1"
-```
+Local hook (air-gapped / no GitHub access):
 
 ```yaml
-# .pre-commit-config.yaml
 repos:
   - repo: local
     hooks:
@@ -171,55 +289,21 @@ repos:
         args: ["--fail-on-severity", "high"]
 ```
 
-All engines:
-
-```yaml
-repos:
-  - repo: local
-    hooks:
-      - id: bawbel-scan-all
-        name: Bawbel Scanner (all engines)
-        entry: bawbel scan
-        language: system
-        types_or: [markdown, yaml, json]
-        pass_filenames: true
-        args: ["--fail-on-severity", "high"]
-```
-
-### Setup
+Setup:
 
 ```bash
 pip install pre-commit
 pre-commit install
-
-# Test without committing
 pre-commit run bawbel-scan --all-files
 ```
 
-### Example output
-
-```
-Bawbel Scanner...........................................................Failed
-- hook id: bawbel-scan
-- exit code: 1
-
-Bawbel Scanner
-──────────────────────────────────────────────────
-AVE vulnerabilities found (HIGH+):
-  [HIGH] AVE-2026-00004  skill.md  line 2
-
-Run 'bawbel report skill.md' for remediation steps.
-Add '<!-- bawbel-ignore: rule_id -->' to suppress false positives.
-See: https://bawbel.io/docs/suppression
-```
-
-### Suppressing false positives
+Suppress a false positive inline:
 
 ```markdown
 fetch https://internal.company.com  <!-- bawbel-ignore: bawbel-external-fetch -->
 ```
 
-Skip hooks for one commit:
+Skip for one commit:
 
 ```bash
 git commit --no-verify
@@ -229,8 +313,6 @@ git commit --no-verify
 
 ## GitLab CI
 
-Findings uploaded as SAST report — visible in the GitLab Security Dashboard.
-
 ```yaml
 # .gitlab-ci.yml
 bawbel-scan:
@@ -239,27 +321,10 @@ bawbel-scan:
   script:
     - pip install "bawbel-scanner[all]"
     - bawbel scan . --recursive --fail-on-severity high --format sarif
-      --output bawbel-results.sarif
   artifacts:
     reports:
       sast: bawbel-results.sarif
-    paths:
-      - bawbel-results.sarif
     when: always
-```
-
-Block merge requests on findings:
-
-```yaml
-bawbel-scan:
-  stage: test
-  image: python:3.12-slim
-  script:
-    - pip install "bawbel-scanner[all]"
-    - bawbel scan . --recursive --fail-on-severity high
-  rules:
-    - if: $CI_PIPELINE_SOURCE == "merge_request_event"
-    - if: $CI_COMMIT_BRANCH == $CI_DEFAULT_BRANCH
 ```
 
 ---
@@ -269,51 +334,18 @@ bawbel-scan:
 ```groovy
 // Jenkinsfile
 pipeline {
-    agent any
-
+    agent { docker { image 'python:3.12-slim' } }
     stages {
         stage('Bawbel Security Scan') {
             steps {
                 sh 'pip install "bawbel-scanner[all]"'
-                sh 'bawbel scan . --recursive --format sarif'
+                sh 'bawbel scan . --recursive --fail-on-severity high'
             }
             post {
                 always {
-                    // Archive SARIF for downstream processing
                     archiveArtifacts artifacts: 'bawbel-results.sarif',
                                      allowEmptyArchive: true
                 }
-            }
-        }
-    }
-}
-```
-
-Fail the build on HIGH+ findings:
-
-```groovy
-stage('Bawbel Security Scan') {
-    steps {
-        sh '''
-            pip install "bawbel-scanner[all]"
-            bawbel scan . --recursive --fail-on-severity high
-        '''
-    }
-}
-```
-
-With Docker agent:
-
-```groovy
-pipeline {
-    agent {
-        docker { image 'python:3.12-slim' }
-    }
-    stages {
-        stage('Scan') {
-            steps {
-                sh 'pip install "bawbel-scanner[all]"'
-                sh 'bawbel scan . --recursive --fail-on-severity high'
             }
         }
     }
@@ -327,7 +359,6 @@ pipeline {
 ```yaml
 # .circleci/config.yml
 version: 2.1
-
 jobs:
   bawbel-scan:
     docker:
@@ -339,25 +370,7 @@ jobs:
           command: pip install "bawbel-scanner[all]"
       - run:
           name: Scan for AVE vulnerabilities
-          command: |
-            bawbel scan . --recursive --format sarif
-      - store_artifacts:
-          path: bawbel-results.sarif
-          destination: security/bawbel-results.sarif
-
-workflows:
-  security:
-    jobs:
-      - bawbel-scan
-```
-
-Fail on HIGH+ findings:
-
-```yaml
-      - run:
-          name: Scan for AVE vulnerabilities
-          command: |
-            bawbel scan . --recursive --fail-on-severity high
+          command: bawbel scan . --recursive --fail-on-severity high
 ```
 
 ---
@@ -366,13 +379,6 @@ Fail on HIGH+ findings:
 
 ```yaml
 # azure-pipelines.yml
-trigger:
-  - main
-  - develop
-
-pool:
-  vmImage: ubuntu-latest
-
 steps:
   - task: UsePythonVersion@0
     inputs:
@@ -381,24 +387,8 @@ steps:
   - script: pip install "bawbel-scanner[all]"
     displayName: Install Bawbel Scanner
 
-  - script: |
-      bawbel scan . --recursive --format sarif
+  - script: bawbel scan . --recursive --fail-on-severity high
     displayName: Scan for AVE vulnerabilities
-
-  - task: PublishBuildArtifacts@1
-    condition: always()
-    inputs:
-      pathToPublish: bawbel-results.sarif
-      artifactName: bawbel-security-report
-```
-
-Fail the pipeline on HIGH+ findings:
-
-```yaml
-  - script: |
-      bawbel scan . --recursive --fail-on-severity high
-    displayName: Scan for AVE vulnerabilities
-    failOnStderr: false
 ```
 
 ---
@@ -408,16 +398,6 @@ Fail the pipeline on HIGH+ findings:
 ```yaml
 # bitbucket-pipelines.yml
 pipelines:
-  default:
-    - step:
-        name: Bawbel Security Scan
-        image: python:3.12-slim
-        script:
-          - pip install "bawbel-scanner[all]"
-          - bawbel scan . --recursive --fail-on-severity high
-        artifacts:
-          - bawbel-results.sarif
-
   pull-requests:
     '**':
       - step:
@@ -430,13 +410,12 @@ pipelines:
 
 ---
 
-## Install Bawbel Scanner
+## Install
 
 ```bash
 pip install bawbel-scanner                  # pattern engine only
 pip install "bawbel-scanner[all]"           # all engines (recommended)
 pip install "bawbel-scanner[yara,semgrep]"  # pattern + YARA + Semgrep
-pip install "bawbel-scanner[magika]"        # + content-type verification
 pip install "bawbel-scanner[llm]"           # + LLM semantic analysis
 ```
 
@@ -450,14 +429,11 @@ bawbel scan ./skills/ --recursive
 
 ## Links
 
-- [bawbel.io](https://bawbel.io) — web scanner, docs, enterprise
-- [bawbel-scanner](https://github.com/bawbel/bawbel-scanner) — CLI scanner
-- [bawbel-ave](https://github.com/bawbel/bawbel-ave) — AVE standard (40 records)
-- [PiranhaDB](https://api.piranha.bawbel.io) — AVE threat intelligence API
-- [Docs](https://bawbel.io/docs)
+- [bawbel-scanner](https://github.com/bawbel/scanner) - CLI scanner
+- [bawbel/ave](https://github.com/bawbel/ave) - AVE standard (48 records)
+- [api.piranha.bawbel.io](https://api.piranha.bawbel.io) - threat intel API
+- [bawbel.io/docs](https://bawbel.io/docs) - full documentation
 
 ---
 
-## License
-
-Apache License 2.0 — see [LICENSE](LICENSE)
+Apache License 2.0

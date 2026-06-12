@@ -8,9 +8,9 @@
  * The panel reuses itself per workspace — only one open at a time.
  */
 
+import * as path  from "path";
 import * as vscode from "vscode";
 import { runCommand } from "../core/cli";
-import { BawbelFileResult } from "../core/types";
 
 export class ReportPanel {
   private static instance: ReportPanel | undefined;
@@ -21,6 +21,17 @@ export class ReportPanel {
     this.panel.onDidDispose(() => { ReportPanel.instance = undefined; });
   }
 
+  // What: opens (or reuses) the Bawbel Report webview and renders the CLI output
+  // Why:  one panel at a time keeps the workspace clean; reuse avoids focus jumping
+  // How:  reveals existing panel or creates a new one, shows a loading placeholder
+  //       while runCommand("bawbel", ["report", filePath]) executes, then renders
+  //       the terminal output as styled HTML via renderHtml()
+  //
+  // Sec:  INPUT  — bawbelPath is from findBawbel() (validated binary path);
+  //                filePath is from VS Code activeTextEditor (trusted workspace path)
+  //       OUTPUT — HTML rendered via escapeHtml() before insertion; scripts disabled
+  //       TRUST  — CLI stdout/stderr treated as untrusted text, only rendered, never eval'd
+  //       ERROR  — runCommand never throws; empty output shows "No output" message
   static async show(
     bawbelPath: string,
     filePath:   string,
@@ -50,7 +61,7 @@ export class ReportPanel {
   }
 
   private static loadingHtml(filePath: string): string {
-    const name = filePath.split("/").pop() ?? filePath;
+    const name = path.basename(filePath);
     return `<!DOCTYPE html>
 <html lang="en">
 <head>
@@ -71,7 +82,7 @@ export class ReportPanel {
   }
 
   private static renderHtml(filePath: string, reportText: string): string {
-    const name = filePath.split("/").pop() ?? filePath;
+    const name = path.basename(filePath);
 
     // Convert ANSI-style terminal output to styled HTML blocks
     const html = reportText

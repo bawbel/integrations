@@ -1,7 +1,7 @@
 {
   "name": "bawbel-scanner",
   "displayName": "Bawbel Scanner",
-  "description": "AVE vulnerability scanner for agentic AI components \u2014 SKILL.md, MCP servers, system prompts. Inline diagnostics, auto-scan on save, 37 rules, 40 AVE records.",
+  "description": "AVE vulnerability scanner for agentic AI components — SKILL.md, MCP servers, system prompts. Inline diagnostics, auto-scan on save, 37 rules, 40 AVE records.",
   "version": "1.1.0",
   "publisher": "bawbel",
   "license": "MIT",
@@ -55,7 +55,7 @@
       },
       {
         "command": "bawbel.scanFolder",
-        "title": "Bawbel: Scan Folder\u2026"
+        "title": "Bawbel: Scan Folder…"
       },
       {
         "command": "bawbel.startWatch",
@@ -107,7 +107,7 @@
         "bawbel.watchMode": {
           "type": "boolean",
           "default": false,
-          "description": "Start watch mode automatically on activation. Off by default \u2014 use 'Bawbel: Start Watch Mode' to enable manually."
+          "description": "Start watch mode automatically on activation. Off by default — use 'Bawbel: Start Watch Mode' to enable manually."
         },
         "bawbel.watchScope": {
           "type": "string",
@@ -186,11 +186,13 @@
   "scripts": {
     "vscode:prepublish": "npm run compile",
     "compile": "tsc -p ./",
-    "watch": "tsc -watch -p ./"
+    "watch": "tsc -watch -p ./",
+    "test": "vitest run"
   },
   "devDependencies": {
     "@types/node": "^20.19.39",
     "@types/vscode": "^1.85.0",
-    "typescript": "^5.9.3"
+    "typescript": "^5.9.3",
+    "vitest": "^4.1.8"
   }
 }
