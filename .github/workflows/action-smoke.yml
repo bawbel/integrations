@@ -1,0 +1,40 @@
+# Smoke test for the published action. It consumes bawbel/integrations@v1 by its public
+# name, never by a relative path, so it checks what a user copying the README gets.
+name: Action smoke test
+
+on:
+  pull_request:
+  push:
+    branches: [develop, main]
+  workflow_dispatch:
+  schedule:
+    - cron: "0 6 * * 1"
+
+permissions:
+  contents: read
+
+jobs:
+  smoke:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Run bawbel/integrations@v1 on a fixture with a known finding
+        id: bawbel
+        uses: bawbel/integrations@v1
+        with:
+          path: test_skill.md
+          recursive: "false"
+          fail-on-severity: none
+
+      - name: Fail unless the action reported findings
+        env:
+          RESULT: ${{ steps.bawbel.outputs.result }}
+          COUNT: ${{ steps.bawbel.outputs.findings-count }}
+        run: |
+          echo "result=$RESULT findings-count=$COUNT"
+          # The action reports "clean" when the scanner errors, so success alone proves nothing.
+          if [ "$RESULT" != "findings" ] || [ "${COUNT:-0}" -lt 1 ]; then
+            echo "::error::expected findings in test_skill.md, got result=$RESULT findings-count=$COUNT"
+            exit 1
+          fi
