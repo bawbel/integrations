@@ -12,7 +12,7 @@ jobs:
       - uses: actions/checkout@v4
 
       - name: Scan for AVE vulnerabilities
-        uses: bawbel/scan-action@v1
+        uses: bawbel/integrations@v1
         id: bawbel
         with:
           path: .

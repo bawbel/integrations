@@ -31,6 +31,9 @@ Scan on every push and pull request. Findings appear as inline PR annotations
 in the GitHub Security tab via SARIF upload. Blocks merges on CRITICAL or HIGH
 findings.
 
+The action reference is `bawbel/integrations@v1`. Use that name, not
+`bawbel/scanner` or `bawbel/bawbel-integrations`.
+
 ```yaml
 # .github/workflows/bawbel.yml
 name: Bawbel Security Scan
@@ -44,7 +47,7 @@ jobs:
       contents: read
     steps:
       - uses: actions/checkout@v4
-      - uses: bawbel/bawbel-integrations@v1
+      - uses: bawbel/integrations@v1
         with:
           path: .
           fail-on-severity: high
