@@ -456,7 +456,7 @@ bawbel scan ./skills/ --recursive
 - [bawbel.io](https://bawbel.io) — web scanner, docs, enterprise
 - [bawbel-scanner](https://github.com/bawbel/bawbel-scanner) — CLI scanner
 - [bawbel-ave](https://github.com/bawbel/bawbel-ave) — AVE standard (40 records)
-- [PiranhaDB](https://api.piranha.bawbel.io) — AVE threat intelligence API
+- [AVE records API](https://api.aveproject.org/records): AVE vulnerability records
 - [Docs](https://bawbel.io/docs)
 
 ---

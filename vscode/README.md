@@ -21,7 +21,7 @@ suppression, watch mode, and full scan reports — no extra config.
 - **Scan report** — `Cmd+Alt+R` opens full `bawbel report` in a panel beside the editor
 - **False-positive suppression** — right-click any squiggle → suppress → saves to `.bawbel-suppress.json`
 - **Team suppressions** — commit `.bawbel-suppress.json` and the whole team shares the same suppressions
-- **PiranhaDB links** — click any finding code → full AVE record with IOCs and remediation
+- **AVE record links**: click any finding code → full AVE record with IOCs and remediation
 - **Zero setup** — auto-installs `bawbel-scanner` on first activation
 
 ---
@@ -57,10 +57,10 @@ pip install bawbel-scanner   # manual install if needed
 | `Bawbel: Stop Watch Mode` | — | Stop background scanning |
 | `Bawbel: Show Suppressions` | — | List all active suppressions in Output panel |
 | `Bawbel: Install / Update CLI` | — | (Re)install `bawbel-scanner` |
-| `Bawbel: Open PiranhaDB` | — | Open AVE record database |
+| `Bawbel: Open AVE records` | none | Open the AVE records API |
 
 Right-click any **folder** in Explorer → scan that folder.
-Right-click any **squiggle** → suppress false positive or open in PiranhaDB.
+Right-click any **squiggle** → suppress false positive or open the AVE record.
 
 ---
 
@@ -90,7 +90,7 @@ How to fix:
 
 AVE: AVE-2026-00004  |  AIVSS: 8.8/10  |  Engine: pattern
 OWASP: ASI01, ASI07
-Details: https://api.piranha.bawbel.io/records/AVE-2026-00004
+Details: https://api.aveproject.org/records/AVE-2026-00004
 ```
 
 ---
@@ -144,7 +144,7 @@ Every finding links to the [AVE Standard](https://github.com/bawbel/bawbel-ave) 
 the open vulnerability enumeration for agentic AI. 40 published records covering
 prompt injection, lateral movement, memory poisoning, covert channels, and more.
 
-Full record database: [api.piranha.bawbel.io](https://api.piranha.bawbel.io)
+Full record database: [api.aveproject.org/records](https://api.aveproject.org/records)
 
 ---
 
@@ -154,4 +154,4 @@ Full record database: [api.piranha.bawbel.io](https://api.piranha.bawbel.io)
 - [GitHub — bawbel-integrations](https://github.com/bawbel/bawbel-integrations)
 - [GitHub — bawbel-scanner](https://github.com/bawbel/bawbel-scanner)
 - [AVE Standard](https://github.com/bawbel/bawbel-ave)
-- [PiranhaDB API](https://api.piranha.bawbel.io)
+- [AVE records API](https://api.aveproject.org/records)
