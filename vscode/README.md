@@ -12,7 +12,7 @@ suppression, watch mode, and full scan reports — no extra config.
 ## Features
 
 - **Inline diagnostics** — red/yellow squiggles on finding lines
-- **Hover detail** — severity, matched text, AVE ID, AIVSS score, OWASP tags
+- **Hover detail**: severity, matched text, AVE ID, AIVSS score, OWASP tags
 - **"How to fix"** — actionable remediation hint in every hover tooltip
 - **Status bar** — `Bawbel: ✓ clean` · `Bawbel: 3 finding(s)` · `👁 Bawbel: watching`
 - **Auto-scan on save** — scans `.md .yaml .yml .json .txt` on every save (~25ms)
