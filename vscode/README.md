@@ -12,7 +12,7 @@ suppression, watch mode, and full scan reports — no extra config.
 ## Features
 
 - **Inline diagnostics** — red/yellow squiggles on finding lines
-- **Hover detail** — severity, matched text, AVE ID, CVSS-AI score, OWASP tags
+- **Hover detail** — severity, matched text, AVE ID, AIVSS score, OWASP tags
 - **"How to fix"** — actionable remediation hint in every hover tooltip
 - **Status bar** — `Bawbel: ✓ clean` · `Bawbel: 3 finding(s)` · `👁 Bawbel: watching`
 - **Auto-scan on save** — scans `.md .yaml .yml .json .txt` on every save (~25ms)
@@ -88,7 +88,7 @@ How to fix:
   Remove curl|bash or similar pipe patterns. If code execution
   is needed, use a sandboxed tool with explicit user consent.
 
-AVE: AVE-2026-00004  |  CVSS-AI: 8.8/10  |  Engine: pattern
+AVE: AVE-2026-00004  |  AIVSS: 8.8/10  |  Engine: pattern
 OWASP: ASI01, ASI07
 Details: https://api.piranha.bawbel.io/records/AVE-2026-00004
 ```
