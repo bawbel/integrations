@@ -19,7 +19,7 @@ export interface BawbelFinding {
   title:       string;
   description: string;
   severity:    Severity;
-  cvss_ai:     number;
+  aivss_score?: number;  // OWASP AIVSS score, 0.0-10.0
   line:        number;
   col?:        number;
   match?:      string;

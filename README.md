@@ -89,7 +89,7 @@ pip install bawbel-scanner
 **What you get:**
 
 - Inline squiggles on every finding — red (error) or yellow (warning)
-- Hover tooltip: severity, match, AVE ID, CVSS-AI score, "How to fix"
+- Hover tooltip: severity, match, AVE ID, AIVSS score, "How to fix"
 - Auto-scan on save (~25ms, pattern+yara — never slows the machine)
 - Full scan on demand — all engines, workspace or folder scope (`Cmd+Alt+B`)
 - Watch mode — real-time background scanning, scoped to file/folder/workspace

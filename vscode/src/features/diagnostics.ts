@@ -229,7 +229,11 @@ export class DiagnosticsManager {
       `${fixLabel}:`,
       `  ${fix}`,
       "",
-      `AVE: ${f.ave_id}  |  CVSS-AI: ${f.cvss_ai}/10  |  Engine: ${f.engine}`,
+      [
+        `AVE: ${f.ave_id}`,
+        typeof f.aivss_score === "number" ? `AIVSS: ${f.aivss_score}/10` : "",
+        `Engine: ${f.engine}`,
+      ].filter(Boolean).join("  |  "),
       owasp     ? `OWASP: ${owasp}` : "",
       `Details: ${PIRANHA_BASE}/records/${f.ave_id}`,
     ].filter(s => s !== undefined).join("\n");

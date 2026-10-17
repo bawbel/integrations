@@ -1,5 +1,12 @@
 # Changelog
 
+## [Unreleased]
+
+### Fixed
+- Hover shows the OWASP AIVSS score (`aivss_score`) as `AIVSS: x/10`. It read the
+  retired `cvss_ai` field, which bawbel-scanner no longer emits, and showed
+  `CVSS-AI: undefined/10`.
+
 ## [1.1.0] — 2026-04-26
 
 ### Added
