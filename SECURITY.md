@@ -22,4 +22,5 @@ In scope: this repository.
 Out of scope, report to the relevant repository instead:
 
 - Detection rules, false positives, and missed findings: [bawbel/scanner](https://github.com/bawbel/scanner)
-- AVE record content or the AVE schema: [bawbel/ave](https://github.com/bawbel/ave)
+- AVE record content or the AVE schema: [aveproject/ave](https://github.com/aveproject/ave), an
+  independent project. Contact: aveproject.org@gmail.com
