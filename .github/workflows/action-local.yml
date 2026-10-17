@@ -1,0 +1,77 @@
+# Tests the action in this checkout (uses: ./), so a change to action.yml is tested before
+# the v1 tag moves. action-smoke.yml tests the published tag.
+name: Action tests (working tree)
+
+on:
+  pull_request:
+  push:
+    branches: [develop, main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  findings:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+
+      - name: Run ./ on a fixture with a known finding
+        id: bawbel
+        uses: ./
+        with:
+          path: test_skill.md
+          recursive: "false"
+          fail-on-severity: none
+
+      - name: Fail unless the action reported findings and wrote SARIF
+        env:
+          RESULT: ${{ steps.bawbel.outputs.result }}
+          COUNT: ${{ steps.bawbel.outputs.findings-count }}
+          SARIF: ${{ steps.bawbel.outputs.sarif-file }}
+        run: |
+          echo "result=$RESULT findings-count=$COUNT sarif-file=$SARIF"
+          if [ "$RESULT" != "findings" ] || [ "${COUNT:-0}" -lt 1 ] || [ ! -s "$SARIF" ]; then
+            echo "::error::expected findings and a non-empty SARIF file"
+            exit 1
+          fi
+
+  fails-closed:
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        case:
+          - name: missing path
+            path: does-not-exist.md
+            fail-on-severity: none
+          - name: no scannable files
+            path: vscode/images
+            fail-on-severity: none
+          - name: HIGH finding over a high threshold
+            path: test_skill.md
+            fail-on-severity: high
+    name: fails closed (${{ matrix.case.name }})
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+
+      - name: Run ./ expecting failure
+        id: bawbel
+        continue-on-error: true
+        uses: ./
+        with:
+          path: ${{ matrix.case.path }}
+          recursive: "false"
+          fail-on-severity: ${{ matrix.case.fail-on-severity }}
+
+      - name: Fail unless the action failed
+        env:
+          OUTCOME: ${{ steps.bawbel.outcome }}
+          RESULT: ${{ steps.bawbel.outputs.result }}
+        run: |
+          echo "outcome=$OUTCOME result=$RESULT"
+          if [ "$OUTCOME" != "failure" ]; then
+            echo "::error::expected the action to fail"
+            exit 1
+          fi
