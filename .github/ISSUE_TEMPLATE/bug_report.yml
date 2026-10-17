@@ -1,0 +1,63 @@
+name: Bug report
+description: An integration that fails, misreads scanner output, or does not match its docs.
+title: "bug: "
+labels: [bug]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Do not report a security vulnerability in a public issue.
+
+  - type: dropdown
+    id: component
+    attributes:
+      label: Component
+      multiple: true
+      options:
+        - GitHub Action (action.yml)
+        - pre-commit hook
+        - VS Code extension
+        - GitLab CI example
+        - Azure DevOps example
+        - CircleCI example
+        - Bitbucket Pipelines example
+        - Jenkins example
+        - docs
+        - other
+    validations:
+      required: true
+
+  - type: input
+    id: version
+    attributes:
+      label: Version
+      description: >-
+        The action ref (for example `bawbel/integrations@v1`), the pre-commit `rev`, or the
+        extension version. Add the output of `bawbel --version`.
+    validations:
+      required: true
+
+  - type: textarea
+    id: reproduction
+    attributes:
+      label: Reproduction
+      description: The workflow, hook config, or steps. Redact secrets.
+      render: yaml
+    validations:
+      required: true
+
+  - type: textarea
+    id: expected
+    attributes:
+      label: Expected
+    validations:
+      required: true
+
+  - type: textarea
+    id: actual
+    attributes:
+      label: Actual
+      description: Log output, exit code, or the action outputs.
+      render: text
+    validations:
+      required: true
