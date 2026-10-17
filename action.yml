@@ -64,70 +64,90 @@ runs:
   steps:
     - name: Install Bawbel Scanner
       shell: bash
+      env:
+        BAWBEL_VERSION: ${{ inputs.version }}
+        BAWBEL_EXTRAS: ${{ inputs.extras }}
       run: |
-        if [ "${{ inputs.version }}" = "latest" ]; then
-          pip install "bawbel-scanner[${{ inputs.extras }}]" --quiet
+        if [ "$BAWBEL_VERSION" = "latest" ]; then
+          pip install "bawbel-scanner[${BAWBEL_EXTRAS}]" --quiet
         else
-          pip install "bawbel-scanner[${{ inputs.extras }}]==${{ inputs.version }}" --quiet
+          pip install "bawbel-scanner[${BAWBEL_EXTRAS}]==${BAWBEL_VERSION}" --quiet
         fi
 
+    # Fail closed: a scanner error, or output that is not JSON, fails this step.
+    # It never reads as a clean result.
     - name: Run Bawbel scan
       id: scan
       shell: bash
+      env:
+        SCAN_PATH: ${{ inputs.path }}
+        SCAN_FORMAT: ${{ inputs.format }}
+        SCAN_RECURSIVE: ${{ inputs.recursive }}
+        SCAN_NO_IGNORE: ${{ inputs.no-ignore }}
       run: |
-        ARGS="--format ${{ inputs.format }}"
-
-        if [ "${{ inputs.recursive }}" = "true" ]; then
-          ARGS="$ARGS --recursive"
+        ARGS=()
+        if [ "$SCAN_RECURSIVE" = "true" ]; then
+          ARGS+=(--recursive)
         fi
-
-        if [ "${{ inputs.no-ignore }}" = "true" ]; then
-          ARGS="$ARGS --no-ignore"
+        if [ "$SCAN_NO_IGNORE" = "true" ]; then
+          ARGS+=(--no-ignore)
         fi
+        ERR_LOG="$(mktemp)"
 
-        if [ "${{ inputs.format }}" = "sarif" ]; then
+        if [ "$SCAN_FORMAT" = "sarif" ]; then
           SARIF_FILE="bawbel-results.sarif"
-          bawbel scan "${{ inputs.path }}" $ARGS > "$SARIF_FILE" 2>/dev/null || true
-          echo "sarif-file=$SARIF_FILE" >> $GITHUB_OUTPUT
+          if ! bawbel scan "$SCAN_PATH" "${ARGS[@]}" --format sarif > "$SARIF_FILE" 2> "$ERR_LOG"; then
+            cat "$ERR_LOG" >&2
+            echo "::error::bawbel scan failed while writing SARIF"
+            exit 1
+          fi
+          echo "sarif-file=$SARIF_FILE" >> "$GITHUB_OUTPUT"
         fi
 
-        JSON_OUT=$(bawbel scan "${{ inputs.path }}" $ARGS --format json 2>/dev/null || echo "[]")
+        if ! JSON_OUT=$(bawbel scan "$SCAN_PATH" "${ARGS[@]}" --format json 2> "$ERR_LOG"); then
+          cat "$ERR_LOG" >&2
+          echo "::error::bawbel scan failed"
+          exit 1
+        fi
 
-        FINDINGS=$(echo "$JSON_OUT" | python3 -c "
-        import json,sys
+        if ! SUMMARY=$(printf '%s' "$JSON_OUT" | python3 -c "
+        import json, sys
         data = json.load(sys.stdin)
-        total = sum(len(r.get('findings',[])) for r in data)
-        score = max((r.get('risk_score',0) for r in data), default=0)
-        result = 'findings' if total > 0 else 'clean'
+        data = data if isinstance(data, list) else [data]
+        total = sum(len(r.get('findings', [])) for r in data)
+        score = max((r.get('risk_score', 0) for r in data), default=0)
         print('count=' + str(total))
         print('score=' + str(round(score, 1)))
-        print('result=' + result)
-        " 2>/dev/null || printf "count=0\nscore=0.0\nresult=clean")
+        print('result=' + ('findings' if total > 0 else 'clean'))
+        "); then
+          cat "$ERR_LOG" >&2
+          echo "::error::bawbel scan output is not JSON: no scannable files under the path, or the scanner failed"
+          exit 1
+        fi
 
-        echo "findings-count=$(echo "$FINDINGS" | grep count= | cut -d= -f2)" >> $GITHUB_OUTPUT
-        echo "risk-score=$(echo "$FINDINGS" | grep score= | cut -d= -f2)" >> $GITHUB_OUTPUT
-        echo "result=$(echo "$FINDINGS" | grep result= | cut -d= -f2)" >> $GITHUB_OUTPUT
+        echo "findings-count=$(echo "$SUMMARY" | grep '^count=' | cut -d= -f2)" >> "$GITHUB_OUTPUT"
+        echo "risk-score=$(echo "$SUMMARY" | grep '^score=' | cut -d= -f2)" >> "$GITHUB_OUTPUT"
+        echo "result=$(echo "$SUMMARY" | grep '^result=' | cut -d= -f2)" >> "$GITHUB_OUTPUT"
 
     - name: Check severity threshold
       shell: bash
+      env:
+        SCAN_PATH: ${{ inputs.path }}
+        SCAN_RECURSIVE: ${{ inputs.recursive }}
+        SCAN_NO_IGNORE: ${{ inputs.no-ignore }}
+        FAIL_ON: ${{ inputs.fail-on-severity }}
+        COUNT: ${{ steps.scan.outputs.findings-count }}
       run: |
-        if [ "${{ inputs.fail-on-severity }}" = "none" ]; then
+        if [ "$FAIL_ON" = "none" ] || [ "$COUNT" = "0" ]; then
           exit 0
         fi
 
-        COUNT="${{ steps.scan.outputs.findings-count }}"
-        if [ -z "$COUNT" ] || [ "$COUNT" = "0" ]; then
-          exit 0
+        ARGS=()
+        if [ "$SCAN_RECURSIVE" = "true" ]; then
+          ARGS+=(--recursive)
+        fi
+        if [ "$SCAN_NO_IGNORE" = "true" ]; then
+          ARGS+=(--no-ignore)
         fi
 
-        EXTRA_ARGS=""
-        if [ "${{ inputs.recursive }}" = "true" ]; then
-          EXTRA_ARGS="$EXTRA_ARGS --recursive"
-        fi
-        if [ "${{ inputs.no-ignore }}" = "true" ]; then
-          EXTRA_ARGS="$EXTRA_ARGS --no-ignore"
-        fi
-
-        bawbel scan "${{ inputs.path }}" $EXTRA_ARGS \
-          --fail-on-severity "${{ inputs.fail-on-severity }}" \
-          --format text
+        bawbel scan "$SCAN_PATH" "${ARGS[@]}" --fail-on-severity "$FAIL_ON" --format text
