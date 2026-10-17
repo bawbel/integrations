@@ -17,10 +17,11 @@ jobs:
   smoke:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
 
       - name: Run bawbel/integrations@v1 on a fixture with a known finding
         id: bawbel
+        # Deliberately unpinned: this job tests the public v1 tag that users copy.
         uses: bawbel/integrations@v1
         with:
           path: test_skill.md

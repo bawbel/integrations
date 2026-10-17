@@ -1,0 +1,35 @@
+name: Feature request
+description: A new integration, a new action input or output, or a change to an existing one.
+title: "feat: "
+labels: [enhancement]
+body:
+  - type: dropdown
+    id: component
+    attributes:
+      label: Component
+      multiple: true
+      options:
+        - GitHub Action (action.yml)
+        - pre-commit hook
+        - VS Code extension
+        - CI example
+        - new integration
+        - docs
+    validations:
+      required: true
+
+  - type: textarea
+    id: problem
+    attributes:
+      label: Problem
+      description: What cannot be done today. Name the CI system or editor.
+    validations:
+      required: true
+
+  - type: textarea
+    id: proposal
+    attributes:
+      label: Proposal
+      description: Inputs, outputs, config, or commands. Examples over prose.
+    validations:
+      required: true
