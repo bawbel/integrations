@@ -6,6 +6,9 @@
 - Hover shows the OWASP AIVSS score (`aivss_score`) as `AIVSS: x/10`. It read the
   retired `cvss_ai` field, which bawbel-scanner no longer emits, and showed
   `CVSS-AI: undefined/10`.
+- Finding links, the "View record" quick action, the report footer, and the
+  `bawbel.openPiranhaDB` command (now titled "Bawbel: Open AVE records") point at
+  https://api.aveproject.org. They pointed at the offline api.piranha.bawbel.io.
 
 ## [1.1.0] — 2026-04-26
 

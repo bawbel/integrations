@@ -4,7 +4,7 @@
  * Provides right-click actions on Bawbel diagnostics:
  *   - Suppress finding (false positive)
  *   - Remove suppression
- *   - View in PiranhaDB
+ *   - View the AVE record
  *
  * CONTRIBUTING: Add new code actions here. Each action should have a clear
  * label, a command registered in extension.ts, and arguments passed via
@@ -14,7 +14,7 @@
 
 import * as path from "path";
 import * as vscode from "vscode";
-import { BawbelFinding, PIRANHA_BASE, SUPPRESS_FILE } from "../core/types";
+import { BawbelFinding, AVE_RECORDS_BASE, SUPPRESS_FILE } from "../core/types";
 import { isSuppressed, loadSuppressions } from "../core/suppressions";
 import { DiagnosticsManager } from "./diagnostics";
 
@@ -149,15 +149,15 @@ export class BawbelCodeActionProvider implements vscode.CodeActionProvider {
         actions.push(unsuppress);
       }
 
-      // ── PiranhaDB link — always shown ─────────────────────────────────
+      // ── AVE record link, always shown ─────────────────────────────────
       const details       = new vscode.CodeAction(
-        `$(link-external) View ${aveId} in PiranhaDB`,
+        `$(link-external) View the ${aveId} record`,
         vscode.CodeActionKind.Empty
       );
       details.command     = {
         command:   "vscode.open",
-        title:     "Open PiranhaDB",
-        arguments: [vscode.Uri.parse(`${PIRANHA_BASE}/records/${aveId}`)],
+        title:     "Open AVE record",
+        arguments: [vscode.Uri.parse(`${AVE_RECORDS_BASE}/records/${aveId}`)],
       };
       actions.push(details);
     }
