@@ -79,7 +79,7 @@
       },
       {
         "command": "bawbel.openPiranhaDB",
-        "title": "Bawbel: Open PiranhaDB"
+        "title": "Bawbel: Open AVE records"
       }
     ],
     "keybindings": [

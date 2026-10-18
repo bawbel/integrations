@@ -35,7 +35,7 @@ import {
   SCAN_EXTENSIONS_DEFAULT,
   OUTPUT_CHANNEL,
   SUPPRESS_FILE,
-  PIRANHA_BASE,
+  AVE_RECORDS_BASE,
 } from "./core/types";
 
 import { Scanner, autoScanRequest, fullWorkspaceScanRequest, fullFolderScanRequest } from "./features/scanner";
@@ -86,7 +86,7 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
     vscode.commands.registerCommand("bawbel.unsuppressFinding", cmdUnsuppressFinding),
     vscode.commands.registerCommand("bawbel.showSuppressions",  cmdShowSuppressions),
     vscode.commands.registerCommand("bawbel.installCLI",        cmdInstallCLI),
-    vscode.commands.registerCommand("bawbel.openPiranhaDB",     cmdOpenPiranhaDB),
+    vscode.commands.registerCommand("bawbel.openPiranhaDB",     cmdOpenAveRecords),
     vscode.commands.registerCommand("bawbel.clearAndRescan",    cmdClearAndRescan),
     vscode.workspace.onDidSaveTextDocument(onDidSave),
     vscode.window.onDidChangeActiveTextEditor(onEditorChange),
@@ -259,8 +259,8 @@ async function cmdInstallCLI(): Promise<void> {
   refreshStatusBar();
 }
 
-function cmdOpenPiranhaDB(): void {
-  vscode.env.openExternal(vscode.Uri.parse(PIRANHA_BASE));
+function cmdOpenAveRecords(): void {
+  vscode.env.openExternal(vscode.Uri.parse(`${AVE_RECORDS_BASE}/records`));
 }
 
 // ── Event handlers ────────────────────────────────────────────────────────────
