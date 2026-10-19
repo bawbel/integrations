@@ -82,7 +82,7 @@ export type StatusState =
 export const SUPPRESS_FILE   = ".bawbel-suppress.json";
 export const OUTPUT_CHANNEL  = "Bawbel Scanner";
 export const EXTENSION_ID    = "bawbel.bawbel-scanner";
-export const AVE_RECORDS_BASE = "https://api.aveproject.org";
+export const DEFAULT_AVE_API_URL = "https://api.aveproject.org";  // setting: bawbel.aveApiUrl
 export const MARKETPLACE_URL = "https://marketplace.visualstudio.com/items?itemName=bawbel.bawbel-scanner";
 
 export const SCAN_EXTENSIONS_DEFAULT = [".md", ".yaml", ".yml", ".json", ".txt"];
