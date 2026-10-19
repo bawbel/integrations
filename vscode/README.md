@@ -134,6 +134,7 @@ To remove: right-click the faded hint → **Remove suppression**.
 | `bawbel.failOnSeverity` | `high` | Minimum severity shown as error squiggle |
 | `bawbel.scanExtensions` | `[.md,.yaml,.yml,.json,.txt]` | Extensions to auto-scan |
 | `bawbel.bawbelPath` | `""` | Path to bawbel binary (auto-detected if empty) |
+| `bawbel.aveApiUrl` | `https://api.aveproject.org` | Base URL of the AVE records API; finding links open `<base>/records/<AVE ID>`. Must be http(s) |
 | `bawbel.showStatusBar` | `true` | Show status bar item |
 
 ---
