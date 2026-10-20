@@ -1,12 +1,12 @@
 # bawbel-integrations
 
 Integrations for [Bawbel Scanner](https://bawbel.io) — scan agentic AI
-components for [AVE vulnerabilities](https://github.com/bawbel/bawbel-ave)
+components for [AVE vulnerabilities](https://github.com/aveproject/ave)
 across every stage of your development workflow.
 
 [![GitHub Actions](https://img.shields.io/badge/GitHub%20Actions-v1-1db894)](action.yml)
 [![VS Code](https://img.shields.io/visual-studio-marketplace/v/bawbel.bawbel-scanner?color=1db894&label=VS%20Code)](https://marketplace.visualstudio.com/items?itemName=bawbel.bawbel-scanner)
-[![AVE Records](https://img.shields.io/badge/AVE%20records-40-1db894)](https://github.com/bawbel/bawbel-ave)
+[![AVE Records](https://img.shields.io/badge/AVE%20records-40-1db894)](https://github.com/aveproject/ave)
 
 ---
 
@@ -454,8 +454,8 @@ bawbel scan ./skills/ --recursive
 ## Links
 
 - [bawbel.io](https://bawbel.io) — web scanner, docs, enterprise
-- [bawbel-scanner](https://github.com/bawbel/bawbel-scanner) — CLI scanner
-- [bawbel-ave](https://github.com/bawbel/bawbel-ave) — AVE standard (40 records)
+- [bawbel-scanner](https://github.com/bawbel/scanner) - CLI scanner
+- [AVE](https://github.com/aveproject/ave) - AVE standard (40 records)
 - [AVE records API](https://api.aveproject.org/records): AVE vulnerability records
 - [Docs](https://bawbel.io/docs)
 

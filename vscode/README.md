@@ -1,11 +1,11 @@
 # Bawbel Scanner — VS Code Extension
 
-Scan agentic AI components for [AVE vulnerabilities](https://github.com/bawbel/bawbel-ave)
+Scan agentic AI components for [AVE vulnerabilities](https://github.com/aveproject/ave)
 directly in VS Code. Inline squiggles, hover details, remediation hints, false-positive
 suppression, watch mode, and full scan reports — no extra config.
 
 [![Version](https://img.shields.io/visual-studio-marketplace/v/bawbel.bawbel-scanner?color=1db894&label=Marketplace)](https://marketplace.visualstudio.com/items?itemName=bawbel.bawbel-scanner)
-[![AVE Records](https://img.shields.io/badge/AVE%20records-40-1db894)](https://github.com/bawbel/bawbel-ave)
+[![AVE Records](https://img.shields.io/badge/AVE%20records-40-1db894)](https://github.com/aveproject/ave)
 
 ---
 
@@ -140,7 +140,7 @@ To remove: right-click the faded hint → **Remove suppression**.
 
 ## AVE Standard
 
-Every finding links to the [AVE Standard](https://github.com/bawbel/bawbel-ave) —
+Every finding links to the [AVE Standard](https://github.com/aveproject/ave):
 the open vulnerability enumeration for agentic AI. 40 published records covering
 prompt injection, lateral movement, memory poisoning, covert channels, and more.
 
@@ -152,6 +152,6 @@ Full record database: [api.aveproject.org/records](https://api.aveproject.org/re
 
 - [bawbel.io](https://bawbel.io)
 - [GitHub — bawbel-integrations](https://github.com/bawbel/bawbel-integrations)
-- [GitHub — bawbel-scanner](https://github.com/bawbel/bawbel-scanner)
-- [AVE Standard](https://github.com/bawbel/bawbel-ave)
+- [GitHub: bawbel-scanner](https://github.com/bawbel/scanner)
+- [AVE Standard](https://github.com/aveproject/ave)
 - [AVE records API](https://api.aveproject.org/records)
