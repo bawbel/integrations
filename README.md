@@ -31,8 +31,10 @@ Scan on every push and pull request. Findings appear as inline PR annotations
 in the GitHub Security tab via SARIF upload. Blocks merges on CRITICAL or HIGH
 findings.
 
-The action reference is `bawbel/integrations@v1`. Use that name, not
-`bawbel/scanner` or `bawbel/bawbel-integrations`.
+The action reference is `bawbel/integrations`. Use that name, not
+`bawbel/scanner` or `bawbel/bawbel-integrations`. Pin it to a commit SHA and write the
+release in a trailing comment, as below: a tag can be moved, a commit cannot.
+See [Pinning and releases](#pinning-and-releases).
 
 ```yaml
 # .github/workflows/bawbel.yml
@@ -46,12 +48,12 @@ jobs:
       security-events: write
       contents: read
     steps:
-      - uses: actions/checkout@v4
-      - uses: bawbel/integrations@v1
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+      - uses: bawbel/integrations@ee77de3c8fb927a41ca9d8d5f51be22215978d14 # v1.1.0
         with:
           path: .
           fail-on-severity: high
-      - uses: github/codeql-action/upload-sarif@v3
+      - uses: github/codeql-action/upload-sarif@ce5e7eeac396d720fe2d802714996c8ce561e311 # v3.39.0
         if: always()
         with:
           sarif_file: bawbel-results.sarif
@@ -69,6 +71,21 @@ jobs:
 | `extras` | `all` | pip extras: `yara semgrep llm magika all` |
 
 See [`action.yml`](action.yml) for full input/output reference.
+
+### Pinning and releases
+
+Releases are tagged `vMAJOR.MINOR.PATCH` and a release tag is never moved. `v1` is a moving
+tag that points at the newest `v1.x.y` release. Use it to try the action, not in a pipeline
+you rely on. The policy and the release steps are in [RELEASING.md](RELEASING.md).
+
+To pin, take the commit of the release you want and write the release in a comment:
+
+```bash
+gh api repos/bawbel/integrations/commits/v1.1.0 --jq .sha
+```
+
+Dependabot with the `github-actions` ecosystem keeps SHA pins current. This repo uses it
+for its own workflows (`.github/dependabot.yml`).
 
 ---
 
@@ -121,11 +138,17 @@ Block malicious skills at the commit boundary — before they reach CI.
 pre-commit automatically installs `bawbel-scanner` in an isolated virtualenv.
 No manual `pip install` needed.
 
+No release contains these hooks yet. `.pre-commit-hooks.yaml` was added after v1.1.0, so
+`rev: v1` and `rev: v1.1.0` fail with
+`InvalidManifestError: .pre-commit-hooks.yaml is not a file`. Until a release contains
+it, use Option 2. After that, set `rev` to the commit SHA of that release, with the tag in a
+comment as below.
+
 ```yaml
 # .pre-commit-config.yaml
 repos:
   - repo: https://github.com/bawbel/bawbel-integrations
-    rev: v1
+    rev: <release-commit-sha>  # frozen: <release tag>
     hooks:
       - id: bawbel-scan          # pattern engine only (~15ms per file)
 ```
@@ -135,7 +158,7 @@ All engines (YARA + Semgrep + Magika — slower, more thorough):
 ```yaml
 repos:
   - repo: https://github.com/bawbel/bawbel-integrations
-    rev: v1
+    rev: <release-commit-sha>  # frozen: <release tag>
     hooks:
       - id: bawbel-scan-all
 ```
@@ -145,7 +168,7 @@ Custom severity threshold:
 ```yaml
 repos:
   - repo: https://github.com/bawbel/bawbel-integrations
-    rev: v1
+    rev: <release-commit-sha>  # frozen: <release tag>
     hooks:
       - id: bawbel-scan
         args: ["--fail-on-severity", "critical"]

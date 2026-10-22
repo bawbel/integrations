@@ -5,7 +5,7 @@
 #
 #   repos:
 #     - repo: https://github.com/bawbel/bawbel-integrations
-#       rev: v1
+#       rev: <release-commit-sha>  # frozen: <release tag>
 #       hooks:
 #         - id: bawbel-scan
 
