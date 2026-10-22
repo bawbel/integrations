@@ -6,8 +6,8 @@ jobs:
   scan:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
-      - uses: bawbel/integrations@v1
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+      - uses: bawbel/integrations@ee77de3c8fb927a41ca9d8d5f51be22215978d14 # v1.1.0
         with:
           path: .
           fail-on-severity: high

@@ -16,6 +16,6 @@ Outputs renamed or removed: none
 ## Checks
 
 - [ ] Action smoke test passes on this PR
-- [ ] Docs and `examples/` use `bawbel/integrations@v1`
+- [ ] Docs and `examples/` pin every action and `rev` by commit SHA (`python scripts/check_pins.py`)
 - [ ] README and `examples/` match any changed action input or output
 - [ ] No em dashes
