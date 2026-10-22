@@ -1,0 +1,22 @@
+# Schema-valid, but external_comms is set and publish_post is allow: the egress rule
+# must reject it when it sits under prod.
+schema: bawbel/capability-manifest/v1
+subject:
+  kind: mcp-server
+  name: publisher-prod
+  transport: stdio
+
+provenance_class: tool.response.publisher
+instruction_authority: none
+
+trifecta:
+  private_data: false
+  untrusted_content: true
+  external_comms: true
+
+grants:
+  tools:
+    - name: publish_post
+      effect: allow
+    - name: "*"
+      effect: deny
