@@ -1,0 +1,22 @@
+# Passes the schema check. It has external_comms set and an allow grant, which is fine
+# under dev/ because the egress rule is only run against the prod directory.
+schema: bawbel/capability-manifest/v1
+subject:
+  kind: mcp-server
+  name: publisher
+  transport: stdio
+
+provenance_class: tool.response.publisher
+instruction_authority: none
+
+trifecta:
+  private_data: false
+  untrusted_content: true
+  external_comms: true
+
+grants:
+  tools:
+    - name: publish_post
+      effect: allow
+    - name: "*"
+      effect: deny

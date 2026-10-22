@@ -1,0 +1,80 @@
+# Tests gate-lint/ in this checkout (uses: ./gate-lint), so a change to gate-lint/action.yml
+# is tested before the v1 tag moves. Each failing fixture differs from a passing one in the
+# single thing under test (the ok fixture, or the egress fixture with the egress rule off), so
+# a failure cannot come from a wrong path or a broken install.
+name: Gate lint action tests (working tree)
+
+on:
+  pull_request:
+  push:
+    branches: [develop, main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  passes:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+
+      - name: Lint a valid tree, schema and prod egress rule both on
+        uses: ./gate-lint
+        with:
+          manifests: tests/gate-lint/fixtures/ok/manifests
+          prod-manifests: tests/gate-lint/fixtures/ok/manifests/prod
+
+      # Control for the egress case: the same manifest the next job must reject passes the
+      # schema check, so only the egress rule can be what fails it.
+      - name: Lint the egress fixture with the egress rule off
+        uses: ./gate-lint
+        with:
+          manifests: tests/gate-lint/fixtures/egress/manifests
+          prod-manifests: ""
+
+  fails-closed:
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        case:
+          - name: prod manifest with external_comms and an allow grant
+            manifests: tests/gate-lint/fixtures/egress/manifests
+            prod-manifests: tests/gate-lint/fixtures/egress/manifests/prod
+          - name: schema violation
+            manifests: tests/gate-lint/fixtures/bad-schema/manifests
+            prod-manifests: ""
+          - name: directory with no manifests
+            manifests: tests/gate-lint/fixtures/empty/manifests
+            prod-manifests: ""
+          - name: manifest with a .yml extension
+            manifests: tests/gate-lint/fixtures/yml-extension/manifests
+            prod-manifests: ""
+          - name: directory that does not exist
+            manifests: tests/gate-lint/fixtures/does-not-exist
+            prod-manifests: ""
+          - name: prod directory that does not exist
+            manifests: tests/gate-lint/fixtures/ok/manifests
+            prod-manifests: tests/gate-lint/fixtures/does-not-exist
+    name: fails closed (${{ matrix.case.name }})
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+
+      - name: Run ./gate-lint expecting failure
+        id: lint
+        continue-on-error: true
+        uses: ./gate-lint
+        with:
+          manifests: ${{ matrix.case.manifests }}
+          prod-manifests: ${{ matrix.case.prod-manifests }}
+
+      - name: Fail unless the action failed
+        env:
+          OUTCOME: ${{ steps.lint.outcome }}
+        run: |
+          echo "outcome=$OUTCOME"
+          if [ "$OUTCOME" != "failure" ]; then
+            echo "::error::expected the action to fail"
+            exit 1
+          fi

@@ -1,0 +1,93 @@
+name: Bawbel Gate manifest lint
+description: "Lint bawbel-gate capability manifests against their schema, and optionally fail any prod manifest that grants an effect it should not."
+author: Bawbel
+
+branding:
+  icon: check-circle
+  color: green
+
+inputs:
+  manifests:
+    description: "Directory holding the capability manifests (*.cap.yaml or any *.yaml). Linted recursively against the schema."
+    required: false
+    default: "manifests"
+
+  schema:
+    description: "Schema passed to bawbel-gate lint --schema"
+    required: false
+    default: "capability-manifest/v1"
+
+  prod-manifests:
+    description: "Directory of production manifests to check against the egress invariant (DESIGN.md 11.3). Empty string skips the check."
+    required: false
+    default: "manifests/prod"
+
+  forbid-effect:
+    description: "Grant effect that must not appear in a prod manifest that has the tools-with flag set"
+    required: false
+    default: "allow"
+
+  tools-with:
+    description: "Trifecta flag that scopes forbid-effect. Only manifests with this flag true are checked"
+    required: false
+    default: "external_comms"
+
+  version:
+    description: "bawbel-gate version to install (default: latest)"
+    required: false
+    default: "latest"
+
+runs:
+  using: composite
+  steps:
+    - name: Install bawbel-gate
+      shell: bash
+      env:
+        GATE_VERSION: ${{ inputs.version }}
+      run: |
+        if [ "$GATE_VERSION" = "latest" ]; then
+          pip install bawbel-gate --quiet
+        else
+          pip install "bawbel-gate==${GATE_VERSION}" --quiet
+        fi
+
+    # Fail closed. bawbel-gate lint exits 0 on a directory with no *.yaml files and never
+    # reads *.yml, so a mistyped path or a renamed manifest would read as a pass. Both are
+    # refused here before lint runs.
+    - name: Lint manifests
+      shell: bash
+      env:
+        MANIFESTS: ${{ inputs.manifests }}
+        SCHEMA: ${{ inputs.schema }}
+        PROD_MANIFESTS: ${{ inputs.prod-manifests }}
+        FORBID_EFFECT: ${{ inputs.forbid-effect }}
+        TOOLS_WITH: ${{ inputs.tools-with }}
+      run: |
+        set -euo pipefail
+
+        require_manifests() {
+          local dir="$1"
+          if [ ! -d "$dir" ]; then
+            echo "::error::manifest directory not found: $dir"
+            exit 1
+          fi
+          if [ -z "$(find "$dir" -type f -name '*.yaml' -print -quit)" ]; then
+            echo "::error::no *.yaml manifests under $dir, so there is nothing to lint"
+            exit 1
+          fi
+          local skipped
+          skipped="$(find "$dir" -type f -name '*.yml' -print)"
+          if [ -n "$skipped" ]; then
+            echo "::error::bawbel-gate lint reads only *.yaml, so these files would not be checked. Rename them:"
+            echo "$skipped"
+            exit 1
+          fi
+        }
+
+        require_manifests "$MANIFESTS"
+        bawbel-gate lint "$MANIFESTS" --schema "$SCHEMA"
+
+        if [ -n "$PROD_MANIFESTS" ]; then
+          require_manifests "$PROD_MANIFESTS"
+          bawbel-gate lint "$PROD_MANIFESTS" --forbid-effect "$FORBID_EFFECT" --tools-with "$TOOLS_WITH"
+        fi
