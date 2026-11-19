@@ -1,7 +1,7 @@
 {
   "name": "bawbel-scanner",
   "displayName": "Bawbel Scanner",
-  "description": "AVE vulnerability scanner for agentic AI components \u2014 SKILL.md, MCP servers, system prompts. Inline diagnostics, auto-scan on save, 37 rules, 40 AVE records.",
+  "description": "AVE vulnerability scanner for agentic AI components \u2014 SKILL.md, MCP servers, system prompts. Inline diagnostics, auto-scan on save, 37 rules.",
   "version": "1.1.0",
   "publisher": "bawbel",
   "license": "MIT",
