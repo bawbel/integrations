@@ -22,6 +22,7 @@ across every stage of your development workflow.
 | [CircleCI](#circleci) | ✅ v1.1 | [`examples/circleci.yml`](examples/circleci.yml) |
 | [Azure DevOps](#azure-devops) | ✅ v1.1 | [`examples/azure-devops.yml`](examples/azure-devops.yml) |
 | [Bitbucket Pipelines](#bitbucket-pipelines) | ✅ v1.1 | [`examples/bitbucket-pipelines.yml`](examples/bitbucket-pipelines.yml) |
+| [Gate manifest lint](#gate-manifest-lint) | New | [`gate-lint/action.yml`](gate-lint/action.yml), [`examples/gitlab-ci-gate-lint.yml`](examples/gitlab-ci-gate-lint.yml) |
 
 ---
 
@@ -430,6 +431,61 @@ pipelines:
             - pip install "bawbel-scanner[all]"
             - bawbel scan . --recursive --fail-on-severity high
 ```
+
+---
+
+## Gate manifest lint
+
+Lint [bawbel-gate](https://github.com/bawbel/gate) capability manifests in CI. Two checks,
+the ones in gate's DESIGN.md section 11.3:
+
+1. Every `*.yaml` file under `manifests/` is validated against `capability-manifest/v1`.
+2. Every manifest under `manifests/prod/` that sets the `external_comms` trifecta flag
+   fails if any of its grants has the effect `allow`. Use `approve` or `deny` there.
+
+The second check reads the manifest and nothing else. It does not run the server and cannot
+see what a tool does, so a prod manifest that leaves `external_comms` unset is not caught by it.
+
+```yaml
+# .github/workflows/gate-lint.yml
+name: Gate manifest lint
+on: [pull_request]
+
+permissions:
+  contents: read
+
+jobs:
+  lint:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: bawbel/integrations/gate-lint@v1
+        with:
+          manifests: manifests
+          prod-manifests: manifests/prod
+```
+
+**Inputs**
+
+| Input | Default | Description |
+|---|---|---|
+| `manifests` | `manifests` | Directory of manifests, linted recursively |
+| `schema` | `capability-manifest/v1` | Passed to `bawbel-gate lint --schema` |
+| `prod-manifests` | `manifests/prod` | Directory checked for the egress rule. Empty string skips the check |
+| `forbid-effect` | `allow` | Effect a flagged prod manifest must not grant |
+| `tools-with` | `external_comms` | Trifecta flag that selects which prod manifests are checked |
+| `version` | `latest` | `bawbel-gate` version to install. Pin one for a reproducible job |
+
+**The action fails closed.** `bawbel-gate lint` exits 0 on a directory that holds no `*.yaml`
+file and never reads `*.yml`, so a mistyped path or a manifest saved as `.yml` would read as
+a pass. The action fails instead when a directory is missing, holds no `*.yaml` file, or holds
+any `*.yml` file.
+
+**Make it a required check.** On GitHub, open the branch protection rule for your default
+branch, turn on "Require status checks to pass before merging", and select the job (`lint` in
+the example above). On GitLab, turn on "Pipelines must succeed" under Settings > Merge
+requests and use [`examples/gitlab-ci-gate-lint.yml`](examples/gitlab-ci-gate-lint.yml), which
+runs the same checks and takes the same settings as `GATE_*` variables.
 
 ---
 

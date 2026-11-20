@@ -1,0 +1,22 @@
+# Passes both checks: a prod manifest with no external_comms flag, so the egress rule
+# does not apply to it, and every grant is schema-valid.
+schema: bawbel/capability-manifest/v1
+subject:
+  kind: mcp-server
+  name: reader
+  transport: stdio
+
+provenance_class: tool.response.reader
+instruction_authority: none
+
+trifecta:
+  private_data: false
+  untrusted_content: true
+  external_comms: false
+
+grants:
+  tools:
+    - name: get_file
+      effect: allow
+    - name: "*"
+      effect: deny

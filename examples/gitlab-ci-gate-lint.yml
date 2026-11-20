@@ -1,0 +1,61 @@
+# bawbel-gate manifest lint: GitLab CI example
+#
+# Lints capability manifests against their schema, then fails any prod manifest that has
+# the TOOLS_WITH trifecta flag set and a grant with the FORBID_EFFECT effect (gate
+# DESIGN.md 11.3). Nothing is executed: lint only reads the manifest files.
+#
+# Make this job a required check: Settings > Merge requests > "Pipelines must succeed".
+
+bawbel-gate-lint:
+  stage: test
+  image: python:3.12-slim
+
+  variables:
+    GATE_MANIFESTS: manifests
+    GATE_SCHEMA: capability-manifest/v1
+    # Set to an empty string to skip the prod egress check.
+    GATE_PROD_MANIFESTS: manifests/prod
+    GATE_FORBID_EFFECT: allow
+    GATE_TOOLS_WITH: external_comms
+    # Pin a version for a reproducible job, for example "0.1.1".
+    GATE_VERSION: latest
+
+  script:
+    - |
+      set -eu
+      if [ "$GATE_VERSION" = "latest" ]; then
+        pip install --quiet bawbel-gate
+      else
+        pip install --quiet "bawbel-gate==${GATE_VERSION}"
+      fi
+
+      # Fail closed. bawbel-gate lint exits 0 on a directory with no *.yaml files and never
+      # reads *.yml, so a mistyped path or a renamed manifest would read as a pass.
+      require_manifests() {
+        if [ ! -d "$1" ]; then
+          echo "error: manifest directory not found: $1"
+          exit 1
+        fi
+        if [ -z "$(find "$1" -type f -name '*.yaml' -print -quit)" ]; then
+          echo "error: no *.yaml manifests under $1, so there is nothing to lint"
+          exit 1
+        fi
+        skipped="$(find "$1" -type f -name '*.yml' -print)"
+        if [ -n "$skipped" ]; then
+          echo "error: bawbel-gate lint reads only *.yaml, so these files would not be checked. Rename them:"
+          echo "$skipped"
+          exit 1
+        fi
+      }
+
+      require_manifests "$GATE_MANIFESTS"
+      bawbel-gate lint "$GATE_MANIFESTS" --schema "$GATE_SCHEMA"
+
+      if [ -n "$GATE_PROD_MANIFESTS" ]; then
+        require_manifests "$GATE_PROD_MANIFESTS"
+        bawbel-gate lint "$GATE_PROD_MANIFESTS" --forbid-effect "$GATE_FORBID_EFFECT" --tools-with "$GATE_TOOLS_WITH"
+      fi
+
+  rules:
+    - if: $CI_PIPELINE_SOURCE == "merge_request_event"
+    - if: $CI_COMMIT_BRANCH == $CI_DEFAULT_BRANCH
