@@ -12,10 +12,16 @@ Add to `.pre-commit-config.yaml`:
 ```yaml
 repos:
   - repo: https://github.com/bawbel/bawbel-integrations
-    rev: v1
+    rev: <release-commit-sha>  # frozen: <release tag>
     hooks:
       - id: bawbel-scan
 ```
+
+No release contains these hooks yet. `.pre-commit-hooks.yaml` was added after v1.1.0, so
+`rev: v1` and `rev: v1.1.0` fail with
+`InvalidManifestError: .pre-commit-hooks.yaml is not a file`. Until a release contains
+it, use Option 2. After that, set `rev` to the commit SHA of that release, with the tag in a
+comment as below.
 
 That's it. On every `git commit`, Bawbel will scan your staged
 `.md`, `.yaml`, and `.json` files for AVE vulnerabilities.
