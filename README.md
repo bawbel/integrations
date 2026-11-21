@@ -469,6 +469,8 @@ the ones in gate's DESIGN.md section 11.3:
 The second check reads the manifest and nothing else. It does not run the server and cannot
 see what a tool does, so a prod manifest that leaves `external_comms` unset is not caught by it.
 
+Until a release contains `gate-lint`, the example below does not run: replace `<release-commit-sha>` with the `gate-lint` release commit once one is published.
+
 ```yaml
 # .github/workflows/gate-lint.yml
 name: Gate manifest lint
