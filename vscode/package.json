@@ -150,6 +150,13 @@
           "default": "",
           "description": "Absolute path to the bawbel binary. Leave empty to auto-detect (checks PATH and common pip install locations)."
         },
+        "bawbel.aveApiUrl": {
+          "type": "string",
+          "default": "https://api.aveproject.org",
+          "pattern": "^https?://",
+          "patternErrorMessage": "Must be an http:// or https:// URL.",
+          "description": "Base URL of the AVE records API. Finding links open <base>/records/<AVE ID>. A value that is not an http(s) URL is ignored and the default is used."
+        },
         "bawbel.showStatusBar": {
           "type": "boolean",
           "default": true,

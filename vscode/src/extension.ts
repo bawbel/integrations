@@ -35,8 +35,8 @@ import {
   SCAN_EXTENSIONS_DEFAULT,
   OUTPUT_CHANNEL,
   SUPPRESS_FILE,
-  AVE_RECORDS_BASE,
 } from "./core/types";
+import { aveRecordsIndexLink } from "./core/links";
 
 import { Scanner, autoScanRequest, fullWorkspaceScanRequest, fullFolderScanRequest } from "./features/scanner";
 import { DiagnosticsManager } from "./features/diagnostics";
@@ -260,7 +260,7 @@ async function cmdInstallCLI(): Promise<void> {
 }
 
 function cmdOpenAveRecords(): void {
-  vscode.env.openExternal(vscode.Uri.parse(`${AVE_RECORDS_BASE}/records`));
+  vscode.env.openExternal(vscode.Uri.parse(aveRecordsIndexLink()));
 }
 
 // ── Event handlers ────────────────────────────────────────────────────────────
