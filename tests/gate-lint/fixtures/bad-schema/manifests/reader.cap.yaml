@@ -1,0 +1,22 @@
+# Fails the schema check: the schema identifier is wrong.
+# Everything else is valid.
+schema: not-a-capability-manifest
+subject:
+  kind: mcp-server
+  name: reader
+  transport: stdio
+
+provenance_class: tool.response.reader
+instruction_authority: none
+
+trifecta:
+  private_data: false
+  untrusted_content: true
+  external_comms: false
+
+grants:
+  tools:
+    - name: get_file
+      effect: allow
+    - name: "*"
+      effect: deny
