@@ -22,7 +22,7 @@ jobs:
       - name: Run bawbel/integrations@v1 on a fixture with a known finding
         id: bawbel
         # Deliberately unpinned: this job tests the public v1 tag that users copy.
-        uses: bawbel/integrations@v1
+        uses: bawbel/integrations@v1 # pin-exempt: tests the public moving tag that users copy
         with:
           path: test_skill.md
           recursive: "false"
