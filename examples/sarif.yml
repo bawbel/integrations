@@ -9,10 +9,10 @@ jobs:
       security-events: write
       contents: read
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
 
       - name: Scan for AVE vulnerabilities
-        uses: bawbel/integrations@v1
+        uses: bawbel/integrations@ee77de3c8fb927a41ca9d8d5f51be22215978d14 # v1.1.0
         id: bawbel
         with:
           path: .
@@ -20,7 +20,7 @@ jobs:
           format: sarif
 
       - name: Upload to GitHub Security tab
-        uses: github/codeql-action/upload-sarif@v3
+        uses: github/codeql-action/upload-sarif@ce5e7eeac396d720fe2d802714996c8ce561e311 # v3.39.0
         if: always()
         with:
           sarif_file: ${{ steps.bawbel.outputs.sarif-file }}

@@ -1,0 +1,26 @@
+# Every action and pre-commit rev in this repo is pinned by commit SHA (RELEASING.md).
+# fetch-depth 0 brings the tags, which the checker needs to compare a SHA with its release.
+name: Pins
+
+on:
+  pull_request:
+  push:
+    branches: [develop, main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  pins:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+        with:
+          fetch-depth: 0
+
+      - name: Every action and rev is pinned by commit SHA
+        run: python3 scripts/check_pins.py
+
+      - name: Pin checker tests
+        run: python3 -m unittest discover -s tests -p "test_check_pins.py"
