@@ -1,10 +1,10 @@
 # Bawbel Scanner — pre-commit hook definitions
-# https://bawbel.io/docs/integrations/pre-commit
+# https://github.com/bawbel/scanner/blob/main/docs/guides/cicd-integration.md
 #
 # Usage in .pre-commit-config.yaml:
 #
 #   repos:
-#     - repo: https://github.com/bawbel/bawbel-integrations
+#     - repo: https://github.com/bawbel/integrations
 #       rev: <release-commit-sha>  # frozen: <release tag>
 #       hooks:
 #         - id: bawbel-scan

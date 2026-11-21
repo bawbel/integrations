@@ -11,7 +11,7 @@ Add to `.pre-commit-config.yaml`:
 
 ```yaml
 repos:
-  - repo: https://github.com/bawbel/bawbel-integrations
+  - repo: https://github.com/bawbel/integrations
     rev: <release-commit-sha>  # frozen: <release tag>
     hooks:
       - id: bawbel-scan
@@ -70,7 +70,7 @@ AVE vulnerabilities found (HIGH+):
 
 Run 'bawbel report <file>' for remediation steps.
 Add '<!-- bawbel-ignore: rule_id -->' to suppress false positives.
-See: https://bawbel.io/docs/suppression
+See: https://github.com/bawbel/scanner/blob/main/docs/guides/suppression.md
 ```
 
 ---

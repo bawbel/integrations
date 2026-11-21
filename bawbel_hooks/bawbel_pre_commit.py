@@ -102,7 +102,7 @@ def main() -> int:
         print(
             f"Run 'bawbel report <file>' for remediation steps.\n"
             f"Add '<!-- bawbel-ignore: rule_id -->' to suppress false positives.\n"
-            f"See: https://bawbel.io/docs/suppression"
+            f"See: https://github.com/bawbel/scanner/blob/main/docs/guides/suppression.md"
         )
 
     if found:
