@@ -2,6 +2,10 @@
 
 ## [Unreleased]
 
+### Added
+- `bawbel.aveApiUrl` setting: the base URL for AVE record links (default
+  https://api.aveproject.org). A value that is not an http(s) URL falls back to the default.
+
 ### Fixed
 - Hover shows the OWASP AIVSS score (`aivss_score`) as `AIVSS: x/10`. It read the
   retired `cvss_ai` field, which bawbel-scanner no longer emits, and showed

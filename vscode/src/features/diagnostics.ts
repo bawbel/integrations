@@ -16,9 +16,9 @@ import {
   BawbelFileResult,
   SEVERITY_INDEX,
   SEVERITY_EMOJI,
-  AVE_RECORDS_BASE,
   SUPPRESS_FILE,
 } from "../core/types";
+import { aveRecordLink } from "../core/links";
 import { getRemediation, hasSpecificRemediation } from "../core/remediation";
 import { isSuppressed, loadSuppressions } from "../core/suppressions";
 
@@ -235,14 +235,14 @@ export class DiagnosticsManager {
         `Engine: ${f.engine}`,
       ].filter(Boolean).join("  |  "),
       owasp     ? `OWASP: ${owasp}` : "",
-      `Details: ${AVE_RECORDS_BASE}/records/${f.ave_id}`,
+      `Details: ${aveRecordLink(f.ave_id)}`,
     ].filter(s => s !== undefined).join("\n");
 
     const diag   = new vscode.Diagnostic(range, message, vsSev);
     diag.source  = "Bawbel";
     diag.code    = {
       value:  f.ave_id,
-      target: vscode.Uri.parse(`${AVE_RECORDS_BASE}/records/${f.ave_id}`),
+      target: vscode.Uri.parse(aveRecordLink(f.ave_id)),
     };
 
     if (f.severity === "LOW") {
@@ -267,7 +267,7 @@ export class DiagnosticsManager {
     diag.tags   = [vscode.DiagnosticTag.Unnecessary];
     diag.code   = {
       value:  f.ave_id,
-      target: vscode.Uri.parse(`${AVE_RECORDS_BASE}/records/${f.ave_id}`),
+      target: vscode.Uri.parse(aveRecordLink(f.ave_id)),
     };
     return diag;
   }

@@ -14,7 +14,8 @@
 
 import * as path from "path";
 import * as vscode from "vscode";
-import { BawbelFinding, AVE_RECORDS_BASE, SUPPRESS_FILE } from "../core/types";
+import { BawbelFinding, SUPPRESS_FILE } from "../core/types";
+import { aveRecordLink } from "../core/links";
 import { isSuppressed, loadSuppressions } from "../core/suppressions";
 import { DiagnosticsManager } from "./diagnostics";
 
@@ -157,7 +158,7 @@ export class BawbelCodeActionProvider implements vscode.CodeActionProvider {
       details.command     = {
         command:   "vscode.open",
         title:     "Open AVE record",
-        arguments: [vscode.Uri.parse(`${AVE_RECORDS_BASE}/records/${aveId}`)],
+        arguments: [vscode.Uri.parse(aveRecordLink(aveId))],
       };
       actions.push(details);
     }
