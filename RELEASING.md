@@ -45,6 +45,15 @@ There is one exception: `.github/workflows/action-smoke.yml` runs the public `v1
 purpose, because it tests what a user who copies `@v1` gets. The line carries
 `# pin-exempt: <reason>`.
 
+The checker skips a `# pin-exempt:` line only when all of these hold: the reason is at least
+10 characters, the line is a `uses:` line, and its file and exact `uses:` target are listed
+in `EXEMPT_ALLOWLIST` in `scripts/check_pins.py`. Today that is one entry,
+`bawbel/integrations@v1` in `.github/workflows/action-smoke.yml`. Any other `# pin-exempt:`
+fails the `Pins` workflow, and the message names the line and the allowlist. To add an
+exemption, open a pull request that adds an entry to `EXEMPT_ALLOWLIST`. That is an edit to
+the checker, which `.github/CODEOWNERS` assigns to the maintainer like every other path, so
+the exemption is reviewed there and not decided by a comment on a workflow line.
+
 A component that no release contains yet is documented with the placeholder
 `<release-commit-sha>`. The checker lists each one so the release PR can fill them in.
 Dependabot (`.github/dependabot.yml`) updates the pins in workflows every week. It does not

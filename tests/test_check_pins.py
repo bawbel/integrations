@@ -77,8 +77,13 @@ class TestCheckLine(unittest.TestCase):
         self.assertIsNone(self.verdict("        uses: docker://alpine:3.20"))
 
     def test_exempt_mark_skips_with_a_reason(self):
+        # Only in the allowlisted file (see TestExemptions for every case that must fail).
         self.assertIsNone(
-            self.verdict("        uses: bawbel/integrations@v1 # pin-exempt: tests the public tag")
+            check_pins.check_line(
+                ROOT,
+                "        uses: bawbel/integrations@v1 # pin-exempt: tests the public tag",
+                ".github/workflows/action-smoke.yml",
+            )
         )
 
     def test_placeholder_is_reported_not_failed(self):
