@@ -5,7 +5,7 @@ directly in VS Code. Inline squiggles, hover details, remediation hints, false-p
 suppression, watch mode, and full scan reports — no extra config.
 
 [![Version](https://img.shields.io/visual-studio-marketplace/v/bawbel.bawbel-scanner?color=1db894&label=Marketplace)](https://marketplace.visualstudio.com/items?itemName=bawbel.bawbel-scanner)
-[![AVE Records](https://img.shields.io/badge/AVE%20records-40-1db894)](https://github.com/aveproject/ave)
+[![AVE Records](https://img.shields.io/badge/AVE-records-1db894)](https://github.com/aveproject/ave)
 
 ---
 
@@ -134,6 +134,7 @@ To remove: right-click the faded hint → **Remove suppression**.
 | `bawbel.failOnSeverity` | `high` | Minimum severity shown as error squiggle |
 | `bawbel.scanExtensions` | `[.md,.yaml,.yml,.json,.txt]` | Extensions to auto-scan |
 | `bawbel.bawbelPath` | `""` | Path to bawbel binary (auto-detected if empty) |
+| `bawbel.aveApiUrl` | `https://api.aveproject.org` | Base URL of the AVE records API; finding links open `<base>/records/<AVE ID>`. Must be http(s) |
 | `bawbel.showStatusBar` | `true` | Show status bar item |
 
 ---
@@ -141,7 +142,7 @@ To remove: right-click the faded hint → **Remove suppression**.
 ## AVE Standard
 
 Every finding links to the [AVE Standard](https://github.com/aveproject/ave):
-the open vulnerability enumeration for agentic AI. 40 published records covering
+the open vulnerability enumeration for agentic AI. The published records cover
 prompt injection, lateral movement, memory poisoning, covert channels, and more.
 
 Full record database: [api.aveproject.org/records](https://api.aveproject.org/records)
