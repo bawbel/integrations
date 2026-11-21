@@ -181,6 +181,82 @@ class TestRun(unittest.TestCase):
         self.assertEqual(check_pins.main(["--root", str(root)]), 0)
 
 
+SMOKE_FILE = ".github/workflows/action-smoke.yml"
+SMOKE_LINE = "        uses: bawbel/integrations@v1 # pin-exempt: tests the public moving tag that users copy"
+
+
+class TestExemptions(unittest.TestCase):
+    """`# pin-exempt:` skips a line only for an allowlisted file and `uses:` target, with a reason.
+
+    Each case is a one-file tree run through check_pins.run, the way CI reads the repo.
+    """
+
+    tree = TestRun.tree  # the same throwaway-tree helper
+
+    def errors(self, name, line):
+        return check_pins.run(self.tree({name: line + "\n"}))[0]
+
+    def test_the_real_smoke_line_passes(self):
+        text = (ROOT / SMOKE_FILE).read_text(encoding="utf-8")
+        marked = [line for line in text.splitlines() if "pin-exempt:" in line]
+        self.assertEqual(len(marked), 1, marked)
+        self.assertEqual(self.errors(SMOKE_FILE, marked[0]), [])
+
+    def test_empty_reason_fails(self):
+        for line in (
+            "        uses: bawbel/integrations@v1 # pin-exempt:",
+            "        uses: bawbel/integrations@v1 # pin-exempt:     ",
+        ):
+            self.assertEqual(len(self.errors(SMOKE_FILE, line)), 1, repr(line))
+
+    def test_reason_must_be_at_least_ten_characters(self):
+        nine, ten = "too short", "ten chars!"
+        self.assertEqual((len(nine), len(ten)), (9, 10))
+        self.assertEqual(len(self.errors(SMOKE_FILE, f"        uses: bawbel/integrations@v1 # pin-exempt: {nine}")), 1)
+        self.assertEqual(self.errors(SMOKE_FILE, f"        uses: bawbel/integrations@v1 # pin-exempt: {ten}"), [])
+
+    def test_third_party_action_with_a_reason_fails(self):
+        line = "      - uses: actions/checkout@v4 # pin-exempt: tests the moving tag on purpose"
+        self.assertEqual(len(self.errors(".github/workflows/ci.yml", line)), 1)
+        self.assertEqual(len(self.errors(SMOKE_FILE, line)), 1)
+
+    def test_the_allowlisted_target_in_another_file_fails(self):
+        for name in (".github/workflows/other.yml", "README.md", "examples/ci.yml"):
+            self.assertEqual(len(self.errors(name, SMOKE_LINE)), 1, name)
+
+    def test_another_ref_of_the_allowlisted_action_fails(self):
+        for ref in ("v2", "v1.1.0", "main"):
+            line = f"        uses: bawbel/integrations@{ref} # pin-exempt: tests the public moving tag"
+            self.assertEqual(len(self.errors(SMOKE_FILE, line)), 1, ref)
+
+    def test_rev_line_with_a_reason_fails(self):
+        line = "    rev: v1 # pin-exempt: tests the moving tag on purpose"
+        self.assertEqual(len(self.errors("README.md", line)), 1)
+        self.assertEqual(len(self.errors(SMOKE_FILE, line)), 1)
+
+    def test_typo_in_the_mark_still_fails(self):
+        line = "        uses: bawbel/integrations@v1 # pin-exempt : tests the public moving tag"
+        self.assertEqual(len(self.errors(SMOKE_FILE, line)), 1)
+
+    def test_message_names_the_line_and_the_allowlist(self):
+        errors = self.errors("README.md", SMOKE_LINE)
+        self.assertEqual(len(errors), 1)
+        self.assertTrue(errors[0].startswith("README.md:1:"), errors[0])
+        self.assertIn(SMOKE_FILE, errors[0])
+        self.assertIn("bawbel/integrations@v1", errors[0])
+
+    def test_an_exemption_with_no_file_fails_closed(self):
+        verdict = check_pins.check_line(ROOT, SMOKE_LINE)
+        self.assertIsNotNone(verdict)
+        self.assertEqual(verdict[0], "error")
+
+    def test_exit_code_follows_the_exemption(self):
+        bad = self.tree({"README.md": SMOKE_LINE + "\n"})
+        good = self.tree({SMOKE_FILE: SMOKE_LINE + "\n"})
+        self.assertEqual(check_pins.main(["--root", str(bad)]), 1)
+        self.assertEqual(check_pins.main(["--root", str(good)]), 0)
+
+
 class TestThisRepository(unittest.TestCase):
     """The tree this test runs in. CI checks out with fetch-depth 0 so the tags are there."""
 
