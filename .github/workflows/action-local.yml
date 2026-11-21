@@ -21,7 +21,7 @@ jobs:
         id: bawbel
         uses: ./
         with:
-          path: test_skill.md
+          path: tests/fixtures/test_skill.md
           recursive: "false"
           fail-on-severity: none
 
@@ -50,7 +50,7 @@ jobs:
             path: vscode/images
             fail-on-severity: none
           - name: HIGH finding over a high threshold
-            path: test_skill.md
+            path: tests/fixtures/test_skill.md
             fail-on-severity: high
     name: fails closed (${{ matrix.case.name }})
     steps:

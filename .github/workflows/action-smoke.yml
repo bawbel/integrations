@@ -24,7 +24,7 @@ jobs:
         # Deliberately unpinned: this job tests the public v1 tag that users copy.
         uses: bawbel/integrations@v1 # pin-exempt: tests the public moving tag that users copy
         with:
-          path: test_skill.md
+          path: tests/fixtures/test_skill.md
           recursive: "false"
           fail-on-severity: none
 
@@ -36,6 +36,6 @@ jobs:
           echo "result=$RESULT findings-count=$COUNT"
           # The action reports "clean" when the scanner errors, so success alone proves nothing.
           if [ "$RESULT" != "findings" ] || [ "${COUNT:-0}" -lt 1 ]; then
-            echo "::error::expected findings in test_skill.md, got result=$RESULT findings-count=$COUNT"
+            echo "::error::expected findings in tests/fixtures/test_skill.md, got result=$RESULT findings-count=$COUNT"
             exit 1
           fi
