@@ -50,6 +50,16 @@ A component that no release contains yet is documented with the placeholder
 Dependabot (`.github/dependabot.yml`) updates the pins in workflows every week. It does not
 edit the README or `examples/`.
 
+Dependabot version-update pull requests base on `develop`, because `.github/dependabot.yml`
+sets `target-branch: develop`. Dependabot security-update pull requests do not. GitHub
+documents that "security updates always use the default branch for the repository" (the
+`target-branch` section of the [Dependabot options
+reference](https://docs.github.com/en/code-security/reference/supply-chain-security/dependabot-options-reference)),
+and the default branch here is `main`. So a security-update pull request bases on `main`.
+Before merging one, change its base branch to `develop` by hand, so that it reaches `main`
+through the normal `develop` to `main` promotion and does not leave `main` with a commit
+`develop` lacks.
+
 ## Cutting a release
 
 1. `develop` is green: `Action tests (working tree)`, `Gate lint action tests (working tree)`
