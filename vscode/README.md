@@ -152,7 +152,7 @@ Full record database: [api.aveproject.org/records](https://api.aveproject.org/re
 ## Links
 
 - [bawbel.io](https://bawbel.io)
-- [GitHub — bawbel-integrations](https://github.com/bawbel/bawbel-integrations)
+- [GitHub: bawbel/integrations](https://github.com/bawbel/integrations)
 - [GitHub: bawbel-scanner](https://github.com/bawbel/scanner)
 - [AVE Standard](https://github.com/aveproject/ave)
 - [AVE records API](https://api.aveproject.org/records)

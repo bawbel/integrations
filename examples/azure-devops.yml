@@ -1,5 +1,5 @@
 # Bawbel Scanner — Azure DevOps Pipelines example
-# https://bawbel.io/docs/integrations/azure-devops
+# https://github.com/bawbel/scanner/blob/main/docs/guides/cicd-integration.md
 #
 # Place this file at azure-pipelines.yml in your project root,
 # or include it from an existing pipeline.
