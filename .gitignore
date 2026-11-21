@@ -1,3 +1,14 @@
 vscode/out/
 vscode/node_modules/
 **/*.vsix
+
+# Python build and test output
+build/
+dist/
+*.egg-info/
+__pycache__/
+.pytest_cache/
+
+# Local environments and editor files
+.venv/
+.DS_Store
