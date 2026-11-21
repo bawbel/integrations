@@ -481,8 +481,8 @@ jobs:
   lint:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
-      - uses: bawbel/integrations/gate-lint@v1
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+      - uses: bawbel/integrations/gate-lint@<release-commit-sha> # <release tag>
         with:
           manifests: manifests
           prod-manifests: manifests/prod
