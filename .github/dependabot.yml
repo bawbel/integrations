@@ -3,5 +3,7 @@ updates:
   # Keeps the commit SHAs pinned in .github/workflows current.
   - package-ecosystem: github-actions
     directory: /
+    # Feature -> develop -> main: without this, Dependabot targets the default branch, main.
+    target-branch: develop
     schedule:
       interval: weekly
