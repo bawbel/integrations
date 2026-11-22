@@ -31,3 +31,5 @@ export function resolveAveApiUrl(raw: unknown): string {
 export function aveRecordUrl(base: string, aveId: string): string {
   return `${base}/records/${encodeURIComponent(aveId)}`;
 }
+
+export const broken: number = "not a number";
