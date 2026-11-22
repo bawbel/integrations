@@ -1,0 +1,16 @@
+{
+  "extends": "./tsconfig.json",
+  "compilerOptions": {
+    "outDir": "out-test",
+    "rootDir": ".",
+    "sourceMap": false
+  },
+  "include": [
+    "src/core/parser.ts",
+    "src/core/remediation.ts",
+    "src/core/urls.ts",
+    "src/core/types.ts",
+    "test/**/*.ts"
+  ],
+  "exclude": ["node_modules", ".vscode-test"]
+}
