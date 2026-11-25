@@ -1,9 +1,3 @@
-# bawbel-ignore: AVE_ShellPipeInjection
-#   reason: The YARA rule matches the substring "| python" in the step that summarises the scan
-#   (the scanner's own JSON output is piped into python3 -c). Nothing is downloaded, and what is
-#   piped in is read with json.load, never executed. This ignore covers every string that rule
-#   looks for anywhere in this file, so check any new pipe in this file by hand. See issue #98.
-
 name: Bawbel Scanner
 description: "Scan agentic AI components — MCP servers, skills, system prompts — for AVE vulnerabilities before they reach production."
 author: Bawbel
@@ -116,7 +110,9 @@ runs:
           exit 1
         fi
 
-        if ! SUMMARY=$(printf '%s' "$JSON_OUT" | python3 -c "
+        # The JSON goes in on stdin as a here-string, not through a pipe: a pipe into python
+        # is the shape the scanner's own AVE_ShellPipeInjection rule looks for in text.
+        if ! SUMMARY=$(python3 -c "
         import json, sys
         data = json.load(sys.stdin)
         data = data if isinstance(data, list) else [data]
@@ -125,7 +121,7 @@ runs:
         print('count=' + str(total))
         print('score=' + str(round(score, 1)))
         print('result=' + ('findings' if total > 0 else 'clean'))
-        "); then
+        " <<<"$JSON_OUT"); then
           cat "$ERR_LOG" >&2
           echo "::error::bawbel scan output is not JSON: no scannable files under the path, or the scanner failed"
           exit 1
