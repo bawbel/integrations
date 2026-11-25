@@ -409,7 +409,7 @@ steps:
     displayName: Install Bawbel Scanner
 
   - script: |
-      bawbel scan . --recursive --format sarif
+      bawbel scan . --recursive --format sarif > bawbel-results.sarif
     displayName: Scan for AVE vulnerabilities
 
   - task: PublishBuildArtifacts@1
