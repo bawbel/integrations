@@ -1,0 +1,52 @@
+# Tests the pre-commit hook the way a user meets it (tests/test_pre_commit_hook.py).
+# BAWBEL_HOOK_TESTS_REQUIRED=1 turns a missing prerequisite into a failure, so neither job can
+# go green by skipping. Both jobs use the current bawbel-scanner from PyPI (the first installs
+# it, the second gets it through the hook's own pre-commit environment), and the schedule runs
+# them weekly, so a scanner release that breaks the hook turns this red without a push.
+name: Hook tests
+
+on:
+  pull_request:
+  push:
+    branches: [develop, main]
+  schedule:
+    - cron: "23 5 * * 1"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+env:
+  BAWBEL_HOOK_TESTS_REQUIRED: "1"
+
+jobs:
+  entry-point:
+    name: definition and entry point
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      - name: Install this package, the scanner and PyYAML into a virtualenv
+        run: |
+          python3 -m venv "$RUNNER_TEMP/venv"
+          "$RUNNER_TEMP/venv/bin/pip" install --quiet . "bawbel-scanner>=1.0.1" pyyaml
+          echo "$RUNNER_TEMP/venv/bin" >> "$GITHUB_PATH"
+
+      - name: Hook definition and entry point
+        run: python3 -m unittest discover -s tests -p "test_pre_commit_hook.py" -k HookDefinition -k EntryPoint -v
+
+  real-pre-commit:
+    name: real pre-commit
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      - name: Install pre-commit into a virtualenv
+        run: |
+          python3 -m venv "$RUNNER_TEMP/venv"
+          "$RUNNER_TEMP/venv/bin/pip" install --quiet pre-commit
+          echo "$RUNNER_TEMP/venv/bin" >> "$GITHUB_PATH"
+
+      - name: Real pre-commit on a clean and a hostile file
+        run: python3 -m unittest discover -s tests -p "test_pre_commit_hook.py" -k RealPreCommit -v
