@@ -1,8 +1,17 @@
-# Bawbel Scanner — GitLab CI example
+# Bawbel Scanner: GitLab CI example
 # https://github.com/bawbel/scanner/blob/main/docs/guides/cicd-integration.md
 #
-# Findings are uploaded as a SAST report — visible in the
-# GitLab Security Dashboard and merge request security widget.
+# Two jobs, because GitLab ingests a report only from a job that succeeds:
+#
+#   bawbel-scan  writes bawbel-results.sarif and passes whether or not it finds anything,
+#                so GitLab can show the findings in the pipeline Security tab, the
+#                vulnerability report and the merge request widget.
+#   bawbel-gate  fails the pipeline on a finding of high severity or above.
+#
+# The `sarif` report type is a GitLab Ultimate feature. The GitLab docs
+# (docs.gitlab.com/ci/yaml/artifacts_reports) list it as introduced in 18.11 and generally
+# available in 19.2, so check your GitLab version first. The file is also kept as a plain job
+# artifact (paths:).
 
 bawbel-scan:
   stage: test
@@ -10,15 +19,29 @@ bawbel-scan:
 
   script:
     - pip install "bawbel-scanner[all]"
-    - bawbel scan . --recursive --fail-on-severity high --format sarif
+    # `--format sarif` prints to stdout, so redirect it into the file the report points at.
+    # No --fail-on-severity here: it exits 2 on findings, and a failed job is not ingested.
+    - bawbel scan . --recursive --format sarif > bawbel-results.sarif
 
   artifacts:
     reports:
-      sast: bawbel-results.sarif
+      sarif: bawbel-results.sarif
     paths:
       - bawbel-results.sarif
     when: always
     expire_in: 30 days
+
+  rules:
+    - if: $CI_PIPELINE_SOURCE == "merge_request_event"
+    - if: $CI_COMMIT_BRANCH == $CI_DEFAULT_BRANCH
+
+bawbel-gate:
+  stage: test
+  image: python:3.12-slim
+
+  script:
+    - pip install "bawbel-scanner[all]"
+    - bawbel scan . --recursive --fail-on-severity high
 
   rules:
     - if: $CI_PIPELINE_SOURCE == "merge_request_event"
