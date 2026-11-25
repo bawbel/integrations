@@ -16,6 +16,20 @@ import argparse
 import sys
 from pathlib import Path
 
+# The scanner version the hook is written for: the spec in .pre-commit-hooks.yaml.
+SCANNER_REQUIREMENT = "bawbel-scanner>=1.0.1"
+
+
+def _import_error_message(exc: ImportError) -> str:
+    """The scanner is installed but would not import: say what failed, not "not installed"."""
+    return (
+        "bawbel-scanner is installed but the hook could not import it:\n"
+        f"  {type(exc).__name__}: {exc}\n"
+        f'The hook is written for "{SCANNER_REQUIREMENT}". A symbol it imports may have moved '
+        "or a dependency of the scanner may be missing.\n"
+        "Check the installed version with: pip show bawbel-scanner"
+    )
+
 
 def main() -> int:
     parser = argparse.ArgumentParser(
@@ -46,12 +60,18 @@ def main() -> int:
     # Import here so the hook fails fast with a clear message if not installed
     try:
         from scanner.scanner import scan, SEVERITY_SCORES
-    except ImportError:
-        print(
-            "bawbel-scanner not installed.\n"
-            'Run: pip install "bawbel-scanner>=1.0.1"',
-            file=sys.stderr,
-        )
+    except ModuleNotFoundError as exc:
+        if exc.name == "scanner":
+            print(
+                "bawbel-scanner not installed.\n"
+                f'Run: pip install "{SCANNER_REQUIREMENT}"',
+                file=sys.stderr,
+            )
+        else:
+            print(_import_error_message(exc), file=sys.stderr)
+        return 2
+    except ImportError as exc:
+        print(_import_error_message(exc), file=sys.stderr)
         return 2
 
     threshold = SEVERITY_SCORES.get(args.fail_on_severity.upper(), 0)
