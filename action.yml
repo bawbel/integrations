@@ -1,3 +1,9 @@
+# bawbel-ignore: AVE_ShellPipeInjection
+#   reason: The YARA rule matches the substring "| python" in the step that summarises the scan
+#   (the scanner's own JSON output is piped into python3 -c). Nothing is downloaded, and what is
+#   piped in is read with json.load, never executed. This ignore covers every string that rule
+#   looks for anywhere in this file, so check any new pipe in this file by hand. See issue #98.
+
 name: Bawbel Scanner
 description: "Scan agentic AI components — MCP servers, skills, system prompts — for AVE vulnerabilities before they reach production."
 author: Bawbel
