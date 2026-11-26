@@ -1,0 +1,46 @@
+# Runs the Bawbel scanner over this repository's own files and fails on a finding of high
+# severity or above, the way the examples tell users to run it.
+#
+# Two files are left out, by exact path: tests/fixtures/test_skill.md and examples/skill.md are
+# hostile samples (a curl-to-bash line) that the action smoke tests and the README need the
+# scanner to flag. Every other tracked file is scanned, so a new fixture turns this job red
+# until someone decides what to do with it.
+#
+# The scanner version is pinned so that a new release cannot turn a push red. Dependabot does
+# not read this line, so bump it by hand.
+name: Self-scan
+
+on:
+  pull_request:
+  push:
+    branches: [develop, main]
+
+permissions:
+  contents: read
+
+jobs:
+  self-scan:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      - name: Install the scanner into a virtualenv
+        run: |
+          python3 -m venv "$RUNNER_TEMP/venv"
+          "$RUNNER_TEMP/venv/bin/pip" install --quiet "bawbel-scanner[all]==1.3.0"
+          echo "$RUNNER_TEMP/venv/bin" >> "$GITHUB_PATH"
+
+      - name: Engines
+        run: bawbel version
+
+      - name: Export the tracked files, without the two hostile samples
+        run: |
+          mkdir "$RUNNER_TEMP/src"
+          git archive HEAD -- . ':(exclude)tests/fixtures/test_skill.md' ':(exclude)examples/skill.md' |
+            tar -x -C "$RUNNER_TEMP/src"
+
+      # The CLI exits non-zero on a scanner error, so a broken install fails this job.
+      - name: bawbel scan . --recursive
+        run: |
+          cd "$RUNNER_TEMP/src"
+          bawbel scan . --recursive --fail-on-severity high
