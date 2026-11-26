@@ -32,8 +32,10 @@ jobs:
           "$RUNNER_TEMP/venv/bin/pip" install --quiet . "bawbel-scanner>=1.0.1" pyyaml
           echo "$RUNNER_TEMP/venv/bin" >> "$GITHUB_PATH"
 
+      # ImportFailure needs neither the package nor the scanner, but it runs here so that it runs
+      # in CI at all: the other jobs select other classes.
       - name: Hook definition and entry point
-        run: python3 -m unittest discover -s tests -p "test_pre_commit_hook.py" -k HookDefinition -k EntryPoint -v
+        run: python3 -m unittest discover -s tests -p "test_pre_commit_hook.py" -k HookDefinition -k EntryPoint -k ImportFailure -v
 
   real-pre-commit:
     name: real pre-commit
