@@ -1,5 +1,5 @@
 // Bawbel Scanner — Jenkins Pipeline example
-// https://bawbel.io/docs/integrations/jenkins
+// https://github.com/bawbel/scanner/blob/main/docs/guides/cicd-integration.md
 
 pipeline {
     agent any

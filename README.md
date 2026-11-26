@@ -134,7 +134,7 @@ See [`vscode/README.md`](vscode/README.md) for full documentation.
 
 Block malicious skills at the commit boundary — before they reach CI.
 
-### Option 1 — via bawbel-integrations repo (recommended)
+### Option 1: via the bawbel/integrations repo (recommended)
 
 pre-commit automatically installs `bawbel-scanner` in an isolated virtualenv.
 No manual `pip install` needed.
@@ -148,7 +148,7 @@ comment as below.
 ```yaml
 # .pre-commit-config.yaml
 repos:
-  - repo: https://github.com/bawbel/bawbel-integrations
+  - repo: https://github.com/bawbel/integrations
     rev: <release-commit-sha>  # frozen: <release tag>
     hooks:
       - id: bawbel-scan          # pattern engine only (~15ms per file)
@@ -158,7 +158,7 @@ All engines (YARA + Semgrep + Magika — slower, more thorough):
 
 ```yaml
 repos:
-  - repo: https://github.com/bawbel/bawbel-integrations
+  - repo: https://github.com/bawbel/integrations
     rev: <release-commit-sha>  # frozen: <release tag>
     hooks:
       - id: bawbel-scan-all
@@ -168,7 +168,7 @@ Custom severity threshold:
 
 ```yaml
 repos:
-  - repo: https://github.com/bawbel/bawbel-integrations
+  - repo: https://github.com/bawbel/integrations
     rev: <release-commit-sha>  # frozen: <release tag>
     hooks:
       - id: bawbel-scan
@@ -237,7 +237,7 @@ AVE vulnerabilities found (HIGH+):
 
 Run 'bawbel report skill.md' for remediation steps.
 Add '<!-- bawbel-ignore: rule_id -->' to suppress false positives.
-See: https://bawbel.io/docs/suppression
+See: https://github.com/bawbel/scanner/blob/main/docs/guides/suppression.md
 ```
 
 ### Suppressing false positives
@@ -483,7 +483,7 @@ jobs:
   lint:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
       - uses: bawbel/integrations/gate-lint@<release-commit-sha> # <release tag>
         with:
           manifests: manifests

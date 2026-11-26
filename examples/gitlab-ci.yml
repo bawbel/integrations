@@ -1,5 +1,5 @@
 # Bawbel Scanner — GitLab CI example
-# https://bawbel.io/docs/integrations/gitlab-ci
+# https://github.com/bawbel/scanner/blob/main/docs/guides/cicd-integration.md
 #
 # Findings are uploaded as a SAST report — visible in the
 # GitLab Security Dashboard and merge request security widget.
