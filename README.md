@@ -304,7 +304,7 @@ pipeline {
         stage('Bawbel Security Scan') {
             steps {
                 sh 'pip install "bawbel-scanner[all]"'
-                sh 'bawbel scan . --recursive --format sarif'
+                sh 'bawbel scan . --recursive --format sarif > bawbel-results.sarif'
             }
             post {
                 always {
