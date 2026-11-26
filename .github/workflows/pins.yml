@@ -1,6 +1,7 @@
 # Every action and pre-commit rev in this repo is pinned by commit SHA (RELEASING.md).
 # fetch-depth 0 brings the tags, which the checker needs to compare a SHA with its release.
-# The test step discovers every test file in tests/, so a new one needs no change here.
+# The test step runs only tests/test_check_pins.py. The hook tests need the installed package, so
+# they run in Hook tests (hooks.yml), where BAWBEL_HOOK_TESTS_REQUIRED=1 turns a skip into a failure.
 name: Pins
 
 on:
@@ -23,5 +24,5 @@ jobs:
       - name: Every action and rev is pinned by commit SHA
         run: python3 scripts/check_pins.py
 
-      - name: Tests (every test file in tests/)
-        run: python3 -m unittest discover -s tests -v
+      - name: Pin checker tests (tests/test_check_pins.py)
+        run: python3 -m unittest tests.test_check_pins -v
