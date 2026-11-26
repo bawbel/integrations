@@ -189,5 +189,33 @@ class TestThisRepository(unittest.TestCase):
         self.assertEqual(errors, [])
 
 
+class TestRepositoryLinks(unittest.TestCase):
+    """Rename leftovers (INT-R1): links that must name this repository or describe the example."""
+
+    CANONICAL = "https://github.com/bawbel/integrations"
+    GUIDE = "docs/guides/cicd-integration.md"  # the scanner guide: GitLab CI and GitHub Actions only
+    EXAMPLES = (
+        ("examples/Jenkinsfile", "jenkins", "## Jenkins"),
+        ("examples/circleci.yml", "circleci", "## CircleCI"),
+        ("examples/azure-devops.yml", "azure-devops", "## Azure DevOps"),
+        ("examples/bitbucket-pipelines.yml", "bitbucket-pipelines", "## Bitbucket Pipelines"),
+    )
+
+    def test_the_vscode_manifest_names_this_repository(self):
+        import json
+
+        manifest = json.loads((ROOT / "vscode" / "package.json").read_text(encoding="utf-8"))
+        self.assertEqual(manifest["repository"]["url"], self.CANONICAL)
+        self.assertEqual(manifest["bugs"]["url"], self.CANONICAL + "/issues")
+
+    def test_each_example_header_links_to_the_page_that_describes_it(self):
+        readme = (ROOT / "README.md").read_text(encoding="utf-8")
+        for name, anchor, heading in self.EXAMPLES:
+            header = "\n".join((ROOT / name).read_text(encoding="utf-8").splitlines()[:6])
+            self.assertNotIn(self.GUIDE, header, f"{name}: the scanner guide does not describe it")
+            self.assertIn(f"{self.CANONICAL}/blob/main/README.md#{anchor}", header, name)
+            self.assertIn(f"\n{heading}\n", readme, f"README.md has no '{heading}' section")
+
+
 if __name__ == "__main__":
     unittest.main()
