@@ -8,11 +8,11 @@
   "icon": "images/icon.png",
   "repository": {
     "type": "git",
-    "url": "https://github.com/bawbel/bawbel-integrations"
+    "url": "https://github.com/bawbel/integrations"
   },
   "homepage": "https://bawbel.io",
   "bugs": {
-    "url": "https://github.com/bawbel/bawbel-integrations/issues"
+    "url": "https://github.com/bawbel/integrations/issues"
   },
   "keywords": [
     "security",

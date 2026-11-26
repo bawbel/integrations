@@ -1,5 +1,5 @@
 # Bawbel Scanner — Bitbucket Pipelines example
-# https://github.com/bawbel/scanner/blob/main/docs/guides/cicd-integration.md
+# https://github.com/bawbel/integrations/blob/main/README.md#bitbucket-pipelines
 #
 # Place this file at bitbucket-pipelines.yml in your project root.
 

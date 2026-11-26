@@ -1,5 +1,5 @@
 # Bawbel Scanner — CircleCI example
-# https://github.com/bawbel/scanner/blob/main/docs/guides/cicd-integration.md
+# https://github.com/bawbel/integrations/blob/main/README.md#circleci
 #
 # Place this file at .circleci/config.yml in your project.
 
