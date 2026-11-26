@@ -256,7 +256,10 @@ git commit --no-verify
 
 ## GitLab CI
 
-Findings uploaded as SAST report — visible in the GitLab Security Dashboard.
+This job writes a SARIF report that GitLab shows in the pipeline Security tab. The `sarif`
+report type is a GitLab Ultimate feature (see the notes in
+[`examples/gitlab-ci.yml`](examples/gitlab-ci.yml)). GitLab ingests a report only from a job
+that succeeds, so this job does not use `--fail-on-severity`.
 
 ```yaml
 # .gitlab-ci.yml
@@ -265,20 +268,19 @@ bawbel-scan:
   image: python:3.12-slim
   script:
     - pip install "bawbel-scanner[all]"
-    - bawbel scan . --recursive --fail-on-severity high --format sarif
-      --output bawbel-results.sarif
+    - bawbel scan . --recursive --format sarif > bawbel-results.sarif
   artifacts:
     reports:
-      sast: bawbel-results.sarif
+      sarif: bawbel-results.sarif
     paths:
       - bawbel-results.sarif
     when: always
 ```
 
-Block merge requests on findings:
+Block merge requests on findings with a second job:
 
 ```yaml
-bawbel-scan:
+bawbel-gate:
   stage: test
   image: python:3.12-slim
   script:
