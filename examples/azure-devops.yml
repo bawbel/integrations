@@ -28,8 +28,9 @@ steps:
   - script: pip install "bawbel-scanner[all]"
     displayName: Install Bawbel Scanner
 
+  # `--format sarif` prints to stdout, so redirect it into the file published below.
   - script: |
-      bawbel scan . --recursive --fail-on-severity high --format sarif
+      bawbel scan . --recursive --format sarif > bawbel-results.sarif
     displayName: Scan for AVE vulnerabilities
 
   - task: PublishBuildArtifacts@1
@@ -38,6 +39,11 @@ steps:
       pathToPublish: bawbel-results.sarif
       artifactName: bawbel-security-report
     displayName: Publish SARIF report
+
+  # The gate: fails the pipeline on a finding of high severity or above.
+  - script: |
+      bawbel scan . --recursive --fail-on-severity high
+    displayName: Fail on findings of high severity or above
 
 # ── Publish to GitHub Advanced Security (GHAS) ───────────────────────────────
 # Requires the SARIF file to be uploaded via the REST API or a marketplace task.
