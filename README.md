@@ -443,9 +443,15 @@ pipelines:
         image: python:3.12-slim
         script:
           - pip install "bawbel-scanner[all]"
-          - bawbel scan . --recursive --fail-on-severity high
+          - bawbel scan . --recursive --format sarif > bawbel-results.sarif
         artifacts:
           - bawbel-results.sarif
+    - step:
+        name: Bawbel Gate
+        image: python:3.12-slim
+        script:
+          - pip install "bawbel-scanner[all]"
+          - bawbel scan . --recursive --fail-on-severity high
 
   pull-requests:
     '**':
