@@ -369,7 +369,7 @@ jobs:
       - run:
           name: Scan for AVE vulnerabilities
           command: |
-            bawbel scan . --recursive --format sarif
+            bawbel scan . --recursive --format sarif > bawbel-results.sarif
       - store_artifacts:
           path: bawbel-results.sarif
           destination: security/bawbel-results.sarif

@@ -16,11 +16,17 @@ jobs:
           command: pip install "bawbel-scanner[all]"
       - run:
           name: Scan for AVE vulnerabilities
+          # `--format sarif` prints to stdout, so redirect it into the file stored below.
+          # No --fail-on-severity here: the file is stored whether or not there are findings.
           command: |
-            bawbel scan . --recursive --fail-on-severity high --format sarif
+            bawbel scan . --recursive --format sarif > bawbel-results.sarif
       - store_artifacts:
           path: bawbel-results.sarif
           destination: security/bawbel-results.sarif
+      - run:
+          name: Fail on findings of high severity or above
+          command: |
+            bawbel scan . --recursive --fail-on-severity high
 
 workflows:
   security:
