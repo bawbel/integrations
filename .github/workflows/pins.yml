@@ -1,5 +1,6 @@
 # Every action and pre-commit rev in this repo is pinned by commit SHA (RELEASING.md).
 # fetch-depth 0 brings the tags, which the checker needs to compare a SHA with its release.
+# The test step discovers every test file in tests/, so a new one needs no change here.
 name: Pins
 
 on:
@@ -22,5 +23,5 @@ jobs:
       - name: Every action and rev is pinned by commit SHA
         run: python3 scripts/check_pins.py
 
-      - name: Pin checker tests
-        run: python3 -m unittest discover -s tests -p "test_check_pins.py"
+      - name: Tests (every test file in tests/)
+        run: python3 -m unittest discover -s tests -v

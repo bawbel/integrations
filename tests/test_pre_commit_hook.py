@@ -2,10 +2,12 @@
 
     python3 -m unittest discover -s tests -p "test_pre_commit_hook.py" -v
 
-Three groups, from the cheapest to the most real:
+Four groups, from the cheapest to the most real:
 
   HookDefinition  reads .pre-commit-hooks.yaml and pyproject.toml. Needs PyYAML (the entry
                   check also needs Python 3.11 for tomllib).
+  ImportFailure   runs the hook module against fake `scanner` packages that fail to import in
+                  different ways, and checks the message. Needs nothing but this checkout.
   EntryPoint      runs the installed `bawbel-pre-commit` script. Needs this package and
                   bawbel-scanner installed.
   RealPreCommit   runs the real `pre-commit try-repo` on this repository with an empty cache,
@@ -174,6 +176,71 @@ class RealPreCommit(HookCase):
         self.assertRegex(output, r"Bawbel Scanner\.+Failed")
         self.assertIn("- exit code: 1", output)
         self.assertRegex(output, FINDING)
+
+
+class ImportFailure(unittest.TestCase):
+    """What the hook prints when `from scanner.scanner import ...` fails.
+
+    The hook module is run in a subprocess with `python -S` (no site-packages, so the real
+    scanner cannot be imported) against a fake `scanner` package in a scratch directory on
+    PYTHONPATH, so these tests need neither the installed `bawbel-pre-commit` nor the real
+    scanner, and never skip. A missing scanner gets
+    the install message. Any other import failure (a symbol that moved, a dependency of the
+    scanner that is missing, a scanner without its `scanner.scanner` module) must print the real
+    error, because the scanner is installed and reinstalling it does not help. Exit code 2 in
+    every case.
+    """
+
+    DRIVER = (
+        "import sys\n"
+        "from bawbel_hooks.bawbel_pre_commit import main\n"
+        "sys.argv = ['bawbel-pre-commit', 'SKILL.md']\n"
+        "sys.exit(main())\n"
+    )
+    NOT_INSTALLED = "bawbel-scanner not installed"
+    REQUIREMENT = "bawbel-scanner>=1.0.1"  # the spec in .pre-commit-hooks.yaml
+
+    def hook(self, fake_files=None):
+        tmp = tempfile.TemporaryDirectory()
+        self.addCleanup(tmp.cleanup)
+        fake = Path(tmp.name)
+        for relative, text in (fake_files or {}).items():
+            target = fake / relative
+            target.parent.mkdir(parents=True, exist_ok=True)
+            target.write_text(text, encoding="utf-8")
+        env = dict(os.environ, PYTHONPATH=os.pathsep.join([str(fake), str(ROOT)]))
+        return run([sys.executable, "-S", "-c", self.DRIVER], cwd=tmp.name, env=env)
+
+    def assertRealError(self, result, text):
+        self.assertEqual(result.returncode, 2, result.stdout + result.stderr)
+        self.assertIn(text, result.stderr)
+        self.assertNotIn(self.NOT_INSTALLED, result.stderr)
+        self.assertIn(self.REQUIREMENT, result.stderr)
+
+    def test_a_missing_scanner_says_it_is_not_installed(self):
+        result = self.hook()
+        self.assertEqual(result.returncode, 2, result.stdout + result.stderr)
+        self.assertIn(self.NOT_INSTALLED, result.stderr)
+        self.assertIn(f'pip install "{self.REQUIREMENT}"', result.stderr)
+
+    def test_a_moved_symbol_prints_the_real_error(self):
+        files = {
+            "scanner/__init__.py": "",
+            "scanner/scanner.py": "def scan(*args, **kwargs):\n    pass\n",
+        }
+        self.assertRealError(self.hook(files), "cannot import name 'SEVERITY_SCORES'")
+
+    def test_a_missing_dependency_of_the_scanner_prints_the_real_error(self):
+        files = {
+            "scanner/__init__.py": "",
+            "scanner/scanner.py": "import not_a_real_dependency_for_bawbel_tests\n",
+        }
+        self.assertRealError(
+            self.hook(files), "No module named 'not_a_real_dependency_for_bawbel_tests'"
+        )
+
+    def test_a_scanner_without_its_scanner_module_prints_the_real_error(self):
+        self.assertRealError(self.hook({"scanner/__init__.py": ""}), "No module named 'scanner.scanner'")
 
 
 if __name__ == "__main__":

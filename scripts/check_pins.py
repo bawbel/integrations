@@ -20,9 +20,13 @@ header of .pre-commit-hooks.yaml) are read entry by entry, with `repo:` and `rev
   rev: REF                      a remote entry needs one; its SHA must be the commit of the tag
                                 named in its comment, as for a `uses:` of this repo's own action
 
-Two escapes, both visible in the output:
+Two escapes:
 
-  # pin-exempt: <reason>    on the same line. For a job that tests a moving tag on purpose.
+  # pin-exempt: <reason>    on the same line, for a job that tests a moving tag on purpose.
+                            It passes only when the reason is at least 10 characters, the line
+                            is a `uses:` line, and its file and exact `uses:` target are in
+                            EXEMPT_ALLOWLIST below. Any other `# pin-exempt:` fails. Adding
+                            an entry is a change to this file, so it is reviewed (RELEASING.md).
   @<release-commit-sha>     the literal placeholder, for a component that no release
                             contains yet. Listed so the release PR can fill them in.
 
@@ -53,6 +57,13 @@ CHECKED = (
 )
 PLACEHOLDER = "<release-commit-sha>"
 EXEMPT_MARK = "pin-exempt:"
+MIN_REASON = 10
+# The only lines `# pin-exempt:` may skip: file (relative to the repo root, forward slashes)
+# mapped to the exact `uses:` targets allowed in it. action-smoke.yml tests the public `v1`
+# tag on purpose, because that is what a user who copies `@v1` gets.
+EXEMPT_ALLOWLIST = {
+    ".github/workflows/action-smoke.yml": ("bawbel/integrations@v1",),
+}
 
 SHA = re.compile(r"^[0-9a-f]{40}$")
 USES = re.compile(r"^\s*#?\s*(?:-\s*)?uses:\s*(?P<ref>\S+)\s*(?:#\s*(?P<note>.*))?$")
@@ -75,8 +86,26 @@ def tag_commit(root: Path, tag: str) -> str | None:
     return out.stdout.strip() or None
 
 
-def check_line(root: Path, text: str) -> tuple[str, str] | None:
-    """Return ('error' | 'placeholder', message) for one line, or None when it is fine."""
+def check_exemption(path: str, ref: str, is_uses: bool, reason: str) -> tuple[str, str] | None:
+    """None when a `# pin-exempt:` line is allowed, else ('error', message)."""
+    problems = []
+    if len(reason) < MIN_REASON:
+        problems.append(f"the reason after {EXEMPT_MARK} must be at least {MIN_REASON} characters")
+    if not is_uses or ref not in EXEMPT_ALLOWLIST.get(path, ()):
+        allowed = "; ".join(f"{name}: {', '.join(refs)}" for name, refs in EXEMPT_ALLOWLIST.items())
+        problems.append(
+            f"{EXEMPT_MARK} is allowed only for a `uses:` line in the allowlist ({allowed}); "
+            "a new exemption is a reviewed change to EXEMPT_ALLOWLIST in scripts/check_pins.py"
+        )
+    return ("error", f"{ref}: " + ". ".join(problems)) if problems else None
+
+
+def check_line(root: Path, text: str, path: str = "") -> tuple[str, str] | None:
+    """Return ('error' | 'placeholder', message) for one line, or None when it is fine.
+
+    `path` is the file the line is in, relative to the repo root with forward slashes. A line
+    checked without one cannot be exempt.
+    """
     match = USES.match(text) or REV.match(text)
     if not match:
         return None
@@ -84,7 +113,7 @@ def check_line(root: Path, text: str) -> tuple[str, str] | None:
     is_uses = bool(USES.match(text))
 
     if note.startswith(EXEMPT_MARK):
-        return None
+        return check_exemption(path, ref, is_uses, note[len(EXEMPT_MARK) :].strip())
     if is_uses:
         if ref.startswith(("./", "docker://")) or "@" not in ref:
             return None
@@ -197,15 +226,16 @@ def run(root: Path) -> tuple[list[str], list[str]]:
     errors: list[str] = []
     placeholders: list[str] = []
     for path in checked_files(root):
+        name = path.relative_to(root).as_posix()
         lines = path.read_text(encoding="utf-8").splitlines()
         for number, text in enumerate(lines, start=1):
-            verdict = check_line(root, text)
+            verdict = check_line(root, text, name)
             if verdict is None:
                 continue
-            where = f"{path.relative_to(root)}:{number}"
+            where = f"{name}:{number}"
             (errors if verdict[0] == "error" else placeholders).append(f"{where}: {verdict[1]}")
         for number, message in snippet_errors(root, path, lines):
-            errors.append(f"{path.relative_to(root)}:{number}: {message}")
+            errors.append(f"{name}:{number}: {message}")
     return errors, placeholders
 
 

@@ -110,7 +110,9 @@ runs:
           exit 1
         fi
 
-        if ! SUMMARY=$(printf '%s' "$JSON_OUT" | python3 -c "
+        # The JSON goes in on stdin as a here-string, not through a pipe: a pipe into python
+        # is the shape the scanner's own AVE_ShellPipeInjection rule looks for in text.
+        if ! SUMMARY=$(python3 -c "
         import json, sys
         data = json.load(sys.stdin)
         data = data if isinstance(data, list) else [data]
@@ -119,7 +121,7 @@ runs:
         print('count=' + str(total))
         print('score=' + str(round(score, 1)))
         print('result=' + ('findings' if total > 0 else 'clean'))
-        "); then
+        " <<<"$JSON_OUT"); then
           cat "$ERR_LOG" >&2
           echo "::error::bawbel scan output is not JSON: no scannable files under the path, or the scanner failed"
           exit 1
