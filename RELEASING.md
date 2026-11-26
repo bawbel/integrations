@@ -71,8 +71,8 @@ through the normal `develop` to `main` promotion and does not leave `main` with 
 
 ## Cutting a release
 
-1. `develop` is green: `Action tests (working tree)`, `Gate lint action tests (working tree)`
-   and `Pins`. The README matches `action.yml` and `gate-lint/action.yml`.
+1. `develop` is green: `Action tests (working tree)`, `Gate lint action tests (working tree)`,
+   `Hook tests` and `Pins`. The README matches `action.yml` and `gate-lint/action.yml`.
 2. Promote `develop` to `main` with a pull request that a person reviews.
 3. Tag the merge commit on `main` as `vX.Y.Z` and push the tag. Write the release notes:
    what changed, and anything that makes a workflow behave differently.
@@ -84,3 +84,9 @@ through the normal `develop` to `main` promotion and does not leave `main` with 
    release, and fills in any `<release-commit-sha>` placeholder. Run
    `python scripts/check_pins.py` first: it names every line to change and rejects a SHA that
    does not match its tag.
+7. Refresh the example pins. Dependabot bumps the workflows but not `README.md` or
+   `examples/`, so their `actions/checkout` pin falls behind. Set them to the version the
+   workflows use, after confirming its SHA against the tag
+   (`gh api repos/actions/checkout/commits/vX.Y.Z --jq .sha`). Then run
+   `git grep -h -o -E 'actions/checkout@[0-9a-f]{40} # v[0-9.]+' -- README.md examples .github | sort -u`
+   to list each distinct `actions/checkout` pin in use. It should list one.
