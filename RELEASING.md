@@ -75,3 +75,25 @@ through the normal `develop` to `main` promotion and does not leave `main` with 
    release, and fills in any `<release-commit-sha>` placeholder. Run
    `python scripts/check_pins.py` first: it names every line to change and rejects a SHA that
    does not match its tag.
+
+## Extension releases
+
+The VS Code extension has its own tags, `vscode-vX.Y.Z`, and its own workflow,
+`.github/workflows/vscode-release.yml`. Nothing is published to the Marketplace or Open VSX from
+CI: no publisher token is stored.
+
+1. Set `version` in `vscode/package.json` (and `vscode/CHANGELOG.md`) in a pull request, and
+   promote it to `main` like any other change.
+2. Optional dry run: Actions tab, `VS Code release`, Run workflow. It builds the `.vsix` and
+   keeps it as a workflow artifact. It never creates a Release or an attestation, also when it is
+   run on a tag.
+3. Tag the commit on `main` as `vscode-vX.Y.Z` and push the tag. The workflow fails unless
+   `X.Y.Z` equals the version in `vscode/package.json`. It then builds the `.vsix`, attests it
+   and attaches it to a Release for the tag.
+4. Download the file, check it with `gh attestation verify <file> --repo bawbel/integrations`
+   (it shows where and how the file was built, not that the extension is trustworthy), and
+   install it with `code --install-extension`.
+5. Publish the `.vsix` to the Marketplace and Open VSX by hand.
+
+The Node version in `vscode-release.yml` is exact. Dependabot does not read it: bump it in a
+reviewed change, together with `.github/workflows/vscode.yml` if you want them to match.
