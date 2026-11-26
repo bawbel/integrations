@@ -1,5 +1,5 @@
 # Bawbel Scanner — Bitbucket Pipelines example
-# https://github.com/bawbel/scanner/blob/main/docs/guides/cicd-integration.md
+# https://github.com/bawbel/integrations/blob/main/README.md#bitbucket-pipelines
 #
 # Place this file at bitbucket-pipelines.yml in your project root.
 
@@ -11,23 +11,35 @@ definitions:
         name: Bawbel Security Scan
         script:
           - pip install "bawbel-scanner[all]"
-          - bawbel scan . --recursive --fail-on-severity high
+          # `--format sarif` prints to stdout, so redirect it into the file kept as an artifact.
+          # No --fail-on-severity here: this step passes whether or not there are findings.
+          - bawbel scan . --recursive --format sarif > bawbel-results.sarif
         artifacts:
           - bawbel-results.sarif
+    - step: &bawbel-gate
+        name: Bawbel Gate
+        script:
+          - pip install "bawbel-scanner[all]"
+          # Fails the step on a finding of high severity or above.
+          - bawbel scan . --recursive --fail-on-severity high
 
 pipelines:
   default:
     - step: *bawbel-scan
+    - step: *bawbel-gate
 
   pull-requests:
     '**':
       - step: *bawbel-scan
+      - step: *bawbel-gate
 
   branches:
     main:
       - step: *bawbel-scan
+      - step: *bawbel-gate
     develop:
       - step: *bawbel-scan
+      - step: *bawbel-gate
 
 # ── JSON output for downstream processing ────────────────────────────────────
 #
@@ -37,6 +49,6 @@ pipelines:
 #         name: Bawbel Security Scan
 #         script:
 #           - pip install "bawbel-scanner[all]"
-#           - bawbel scan . --recursive --format json
+#           - bawbel scan . --recursive --format json > bawbel-results.json
 #         artifacts:
 #           - bawbel-results.json

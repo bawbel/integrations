@@ -49,7 +49,7 @@ jobs:
       security-events: write
       contents: read
     steps:
-      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
       - uses: bawbel/integrations@ee77de3c8fb927a41ca9d8d5f51be22215978d14 # v1.1.0
         with:
           path: .
@@ -263,7 +263,10 @@ git commit --no-verify
 
 ## GitLab CI
 
-Findings uploaded as SAST report — visible in the GitLab Security Dashboard.
+This job writes a SARIF report that GitLab shows in the pipeline Security tab. The `sarif`
+report type is a GitLab Ultimate feature (see the notes in
+[`examples/gitlab-ci.yml`](examples/gitlab-ci.yml)). GitLab ingests a report only from a job
+that succeeds, so this job does not use `--fail-on-severity`.
 
 ```yaml
 # .gitlab-ci.yml
@@ -272,20 +275,19 @@ bawbel-scan:
   image: python:3.12-slim
   script:
     - pip install "bawbel-scanner[all]"
-    - bawbel scan . --recursive --fail-on-severity high --format sarif
-      --output bawbel-results.sarif
+    - bawbel scan . --recursive --format sarif > bawbel-results.sarif
   artifacts:
     reports:
-      sast: bawbel-results.sarif
+      sarif: bawbel-results.sarif
     paths:
       - bawbel-results.sarif
     when: always
 ```
 
-Block merge requests on findings:
+Block merge requests on findings with a second job:
 
 ```yaml
-bawbel-scan:
+bawbel-gate:
   stage: test
   image: python:3.12-slim
   script:
@@ -309,7 +311,7 @@ pipeline {
         stage('Bawbel Security Scan') {
             steps {
                 sh 'pip install "bawbel-scanner[all]"'
-                sh 'bawbel scan . --recursive --format sarif'
+                sh 'bawbel scan . --recursive --format sarif > bawbel-results.sarif'
             }
             post {
                 always {
@@ -374,7 +376,7 @@ jobs:
       - run:
           name: Scan for AVE vulnerabilities
           command: |
-            bawbel scan . --recursive --format sarif
+            bawbel scan . --recursive --format sarif > bawbel-results.sarif
       - store_artifacts:
           path: bawbel-results.sarif
           destination: security/bawbel-results.sarif
@@ -416,7 +418,7 @@ steps:
     displayName: Install Bawbel Scanner
 
   - script: |
-      bawbel scan . --recursive --format sarif
+      bawbel scan . --recursive --format sarif > bawbel-results.sarif
     displayName: Scan for AVE vulnerabilities
 
   - task: PublishBuildArtifacts@1
@@ -448,9 +450,15 @@ pipelines:
         image: python:3.12-slim
         script:
           - pip install "bawbel-scanner[all]"
-          - bawbel scan . --recursive --fail-on-severity high
+          - bawbel scan . --recursive --format sarif > bawbel-results.sarif
         artifacts:
           - bawbel-results.sarif
+    - step:
+        name: Bawbel Gate
+        image: python:3.12-slim
+        script:
+          - pip install "bawbel-scanner[all]"
+          - bawbel scan . --recursive --fail-on-severity high
 
   pull-requests:
     '**':

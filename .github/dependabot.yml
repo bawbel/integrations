@@ -7,3 +7,17 @@ updates:
     target-branch: develop
     schedule:
       interval: weekly
+
+  # Keeps the npm dependencies of the VS Code extension (vscode/package-lock.json) current.
+  - package-ecosystem: npm
+    directory: /vscode
+    target-branch: develop
+    schedule:
+      interval: weekly
+
+  # Keeps the Python dependencies declared in pyproject.toml current. It declares none today.
+  - package-ecosystem: pip
+    directory: /
+    target-branch: develop
+    schedule:
+      interval: weekly
