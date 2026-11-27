@@ -186,6 +186,131 @@ class TestRun(unittest.TestCase):
         self.assertEqual(check_pins.main(["--root", str(root)]), 0)
 
 
+CANON = "https://github.com/bawbel/integrations"
+OLD_NAME = "https://github.com/bawbel/bawbel-integrations"
+PLACEHOLDER = "<release-commit-sha>"
+
+
+def fenced(body: str, language: str = "yaml") -> str:
+    """A markdown document with one fenced block around body."""
+    return f"text\n\n```{language}\n{body}```\n\nmore text\n"
+
+
+def entry(repo: str, rev: str, note: str = "# frozen: v1.1.0") -> str:
+    return f"repos:\n  - repo: {repo}\n    rev: {rev}  {note}\n"
+
+
+class TestPreCommitSnippets(unittest.TestCase):
+    """The pre-commit snippets in the docs: one rule, in check_pins.py (INTQ-9).
+
+    Every case of the old tests/test_docs_snippets.py is here, plus the ones that file missed:
+    a `rev:` is compared with the tag in its comment, `repo:` need not be the first key, and the
+    snippet in the header of .pre-commit-hooks.yaml is read.
+    """
+
+    def tree(self, files, repo=False):
+        tmp = tempfile.TemporaryDirectory()
+        self.addCleanup(tmp.cleanup)
+        root = Path(tmp.name)
+        self.sha = make_repo(root) if repo else None
+        for name, body in files.items():
+            path = root / name
+            path.parent.mkdir(parents=True, exist_ok=True)
+            path.write_text(body, encoding="utf-8")
+        return root
+
+    def errors(self, body, name="README.md", repo=False):
+        return check_pins.run(self.tree({name: fenced(body)}, repo=repo))[0]
+
+    def test_canonical_repo_with_the_placeholder_passes(self):
+        self.assertEqual(self.errors(entry(CANON, PLACEHOLDER, "# frozen: <release tag>")), [])
+
+    def test_sha_that_matches_its_tag_passes(self):
+        root = self.tree({}, repo=True)
+        (root / "README.md").write_text(fenced(entry(CANON, self.sha)), encoding="utf-8")
+        self.assertEqual(check_pins.run(root)[0], [])
+
+    def test_rev_sha_must_match_the_tag_in_its_comment(self):
+        errors = self.errors(entry(CANON, SHA_B), repo=True)
+        self.assertEqual(len(errors), 1, errors)
+        self.assertIn("tag v1.1.0 is", errors[0])
+        self.assertIn(SHA_B, errors[0])
+
+    def test_rev_tag_must_exist_in_the_checkout(self):
+        errors = self.errors(entry(CANON, SHA_B, "# frozen: v9.9.9"), repo=True)
+        self.assertEqual(len(errors), 1, errors)
+        self.assertIn("not in this checkout", errors[0])
+
+    def test_local_and_meta_repos_need_no_rev(self):
+        self.assertEqual(self.errors("repos:\n  - repo: local\n    hooks: []\n  - repo: meta\n    hooks: []\n"), [])
+
+    def test_old_repo_name_is_rejected(self):
+        errors = self.errors(entry(OLD_NAME, PLACEHOLDER, "# frozen: <release tag>"))
+        self.assertEqual(len(errors), 1, errors)
+        self.assertIn("bawbel-integrations", errors[0])
+
+    def test_repo_need_not_be_the_first_key_of_an_entry(self):
+        before = f"repos:\n  - rev: {PLACEHOLDER}  # frozen: <release tag>\n    repo: {OLD_NAME}\n"
+        after_hooks = f"repos:\n  - hooks:\n      - id: bawbel-scan\n    rev: {PLACEHOLDER}\n    repo: {OLD_NAME}\n"
+        for body in (before, after_hooks):
+            errors = self.errors(body)
+            self.assertTrue(any("bawbel-integrations" in e for e in errors), (body, errors))
+        good = f"repos:\n  - rev: {PLACEHOLDER}  # frozen: <release tag>\n    repo: {CANON}\n"
+        self.assertEqual(self.errors(good), [])
+
+    def test_moving_tag_or_short_sha_as_rev_is_rejected(self):
+        for rev in ("v1", "v1.1.0", "main", SHA_A[:12]):
+            errors = self.errors(f"repos:\n  - repo: {CANON}\n    rev: {rev}\n")
+            self.assertEqual(len(errors), 1, (rev, errors))
+
+    def test_missing_rev_is_rejected(self):
+        errors = self.errors(f"repos:\n  - repo: {CANON}\n    hooks:\n      - id: bawbel-scan\n")
+        self.assertEqual(len(errors), 1, errors)
+        self.assertIn("no rev", errors[0])
+
+    def test_each_entry_is_checked_on_its_own(self):
+        # The second entry has no rev of its own: the first entry's rev must not cover it.
+        body = entry(CANON, PLACEHOLDER, "# frozen: <release tag>") + f"  - repo: {CANON}\n    hooks:\n      - id: bawbel-scan-all\n"
+        errors = self.errors(body)
+        self.assertEqual(len(errors), 1, errors)
+        self.assertIn("no rev", errors[0])
+
+    def test_an_indented_snippet_is_checked(self):
+        body = f"- step:\n    repos:\n      - repo: {OLD_NAME}\n        rev: {PLACEHOLDER}\n"
+        indented = "text\n\n  ```yaml\n" + body + "  ```\n"
+        errors = check_pins.run(self.tree({"README.md": indented}))[0]
+        self.assertTrue(any("bawbel-integrations" in e for e in errors), errors)
+
+    def test_only_yaml_snippets_are_read(self):
+        other_language = fenced(f"repos:\n  - repo: https://example.invalid/x\n", language="bash")
+        no_repos_key = fenced("name: Gate manifest lint\non: [pull_request]\n")
+        root = self.tree({"README.md": other_language + no_repos_key})
+        self.assertEqual(check_pins.run(root), ([], []))
+
+    def test_the_snippet_in_the_hooks_manifest_header_is_read(self):
+        header = f"# Usage:\n#\n#   repos:\n#     - repo: {OLD_NAME}\n#       rev: {PLACEHOLDER}  # frozen: <release tag>\n#       hooks:\n#         - id: bawbel-scan\n\n- id: bawbel-scan\n"
+        root = self.tree({".pre-commit-hooks.yaml": header})
+        errors = check_pins.run(root)[0]
+        self.assertEqual(len(errors), 1, errors)
+        self.assertTrue(errors[0].startswith(".pre-commit-hooks.yaml:"), errors[0])
+
+    def test_the_real_docs_are_all_read(self):
+        # Put the old name into each real doc. If the extractor silently skipped one, the run
+        # would stay clean for that file and this would pass for the wrong reason.
+        files = {
+            name: (ROOT / name).read_text(encoding="utf-8").replace(CANON, OLD_NAME)
+            for name in ("README.md", "bawbel_hooks/README.md", ".pre-commit-hooks.yaml")
+        }
+        errors = check_pins.run(self.tree(files))[0]
+        for name in files:
+            self.assertTrue(any(e.startswith(name + ":") and "bawbel-integrations" in e for e in errors), (name, errors))
+
+    def test_main_fails_on_the_old_repo_name(self):
+        # The negative control CI relies on: scripts/check_pins.py exits 1.
+        bad = self.tree({"README.md": fenced(entry(OLD_NAME, PLACEHOLDER, "# frozen: <release tag>"))})
+        good = self.tree({"README.md": fenced(entry(CANON, PLACEHOLDER, "# frozen: <release tag>"))})
+
+
 SMOKE_FILE = ".github/workflows/action-smoke.yml"
 SMOKE_LINE = "        uses: bawbel/integrations@v1 # pin-exempt: tests the public moving tag that users copy"
 
