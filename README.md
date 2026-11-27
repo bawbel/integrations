@@ -126,6 +126,13 @@ npx vsce package --no-dependencies
 code --install-extension bawbel-scanner-1.1.1.vsix
 ```
 
+**Release builds:** a tag `vscode-vX.Y.Z`, where `X.Y.Z` is the version in `vscode/package.json`,
+builds the `.vsix` in GitHub Actions and attaches it to a GitHub Release with a build provenance
+attestation. The attestation shows where and how the file was built: this repository's
+`vscode-release.yml` workflow, at that tag and commit. It does not show that the extension is
+trustworthy. Check a downloaded file with `gh attestation verify <file> --repo bawbel/integrations`.
+Publishing to the Marketplace and Open VSX is done by hand.
+
 See [`vscode/README.md`](vscode/README.md) for full documentation.
 
 ---

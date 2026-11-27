@@ -1,0 +1,106 @@
+# Builds the VS Code extension's .vsix and, for a pushed tag vscode-v*, attaches it to a GitHub
+# Release with a build provenance attestation.
+#
+#   tag push        build, then release: the .vsix is attached to a Release for the tag and
+#                   attested. The tag must equal the version in vscode/package.json.
+#   workflow_dispatch   build only: the .vsix is a workflow artifact. Never a Release, never an
+#                   attestation, also when dispatched on a tag ref.
+#
+# Nothing is published to the Marketplace or Open VSX: no publisher token is stored, the
+# maintainer publishes the .vsix by hand. The attestation shows where and how the file was
+# built (this workflow, this repository, this commit). It does not show that the extension is
+# trustworthy.
+#
+# The Node version is exact on purpose. Dependabot does not read it: bumping it is a reviewed
+# change.
+name: VS Code release
+
+on:
+  push:
+    tags: ["vscode-v*"]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    name: build the vsix
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: vscode
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      # @vscode/vsce 4 needs Node 22 or newer.
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version: 22.23.5
+
+      - name: The tag must equal the version in vscode/package.json
+        if: github.ref_type == 'tag'
+        env:
+          TAG: ${{ github.ref_name }}
+        run: |
+          tag_version="${TAG#vscode-v}"
+          package_version="$(node -p "require('./package.json').version")"
+          echo "tag=$TAG version in the tag=$tag_version version in package.json=$package_version"
+          if [ "$tag_version" != "$package_version" ]; then
+            echo "::error::tag $TAG is for version $tag_version but vscode/package.json is $package_version"
+            exit 1
+          fi
+
+      # --ignore-scripts: compiling and packaging need no install script.
+      - name: Install from the lockfile
+        run: npm ci --ignore-scripts
+
+      - name: Type check (npm run lint)
+        run: npm run lint
+
+      - name: Compile
+        run: npm run compile
+
+      - name: Unit tests
+        run: npm test
+
+      - name: Package the extension
+        run: npm run package
+
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: bawbel-scanner-vsix
+          path: vscode/*.vsix
+          if-no-files-found: error
+
+  release:
+    name: attest and attach to a release
+    needs: build
+    # Only a pushed tag vscode-v*. workflow_dispatch never gets here, even on a tag ref.
+    if: github.event_name == 'push' && github.ref_type == 'tag' && startsWith(github.ref_name, 'vscode-v')
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write # create the release
+      id-token: write # sign the attestation
+      attestations: write # store the attestation
+    steps:
+      - uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
+        with:
+          name: bawbel-scanner-vsix
+          path: dist
+
+      - uses: actions/attest@1e69f48acb82d1966a394da916b4c1698aa569d6 # v4.2.2
+        with:
+          subject-path: dist/*.vsix
+
+      - name: Attach the .vsix to a release for the tag
+        env:
+          GH_TOKEN: ${{ github.token }}
+          TAG: ${{ github.ref_name }}
+          COMMIT: ${{ github.sha }}
+        run: |
+          gh release create "$TAG" dist/*.vsix \
+            --repo "$GITHUB_REPOSITORY" \
+            --verify-tag \
+            --title "VS Code extension ${TAG#vscode-v}" \
+            --notes "Built by .github/workflows/vscode-release.yml from tag $TAG at commit $COMMIT. Check the file with: gh attestation verify <file> --repo $GITHUB_REPOSITORY"
